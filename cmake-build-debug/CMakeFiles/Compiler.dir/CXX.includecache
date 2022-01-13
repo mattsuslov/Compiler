@@ -1,0 +1,34 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/Users/matt/CLionProjects/Compiler/SA.cpp
+SA.h
+/Users/matt/CLionProjects/Compiler/SA.h
+regex
+-
+iostream
+-
+Token.h
+/Users/matt/CLionProjects/Compiler/Token.h
+
+/Users/matt/CLionProjects/Compiler/SA.h
+iostream
+-
+vector
+-
+fstream
+-
+map
+-
+Token.h
+/Users/matt/CLionProjects/Compiler/Token.h
+
+/Users/matt/CLionProjects/Compiler/Token.h
+string
+-
+

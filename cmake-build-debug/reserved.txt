@@ -1,0 +1,12 @@
+if
+else
+while
+for
+import
+return
+struct
+int
+bool
+double
+void
+goto
