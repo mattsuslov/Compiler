@@ -10,3 +10,6 @@ bool
 double
 void
 goto
+try
+_code_
+_endcode_

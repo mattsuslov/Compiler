@@ -2,6 +2,7 @@
 #include <regex>
 #include <iostream>
 #include "Token.h"
+#include "Error.h"
 
 SA::SA(const std::vector<Token>& t) {
     tokens = t;
@@ -9,6 +10,9 @@ SA::SA(const std::vector<Token>& t) {
 	GetToken();
 	try {
 		Program();
+	} catch (const Error& e) {
+	    std::cout << e;
+	    return;
 	} catch (const Token& c) {
 		std::cout << "ERROR: Undefined " << c.data << std::endl;
 		return;
@@ -17,10 +21,10 @@ SA::SA(const std::vector<Token>& t) {
 }
 
 void SA::Definition() {
-    Type();
+    EEEType();
     Name();
 
-    if (cur.data != "=") throw cur;
+    if (cur.data != "=") throw ExpectedSymbol(row, col, "=", cur.data.c_str());
     GetToken();
 
     Exp();
@@ -29,7 +33,7 @@ void SA::Definition() {
         GetToken();
         Name();
 
-        if (cur.data != "=") throw cur;
+        if (cur.data != "=") throw ExpectedSymbol(row, col, "=", cur.data.c_str());
         GetToken();
 
         Exp();
@@ -37,15 +41,15 @@ void SA::Definition() {
 }
 
 void SA::While() {
-    if (cur.data != "while") throw cur;
+    if (cur.data != "while") throw ExpectedSymbol(row, col, "while", cur.data.c_str());
     GetToken();
 
-    if (cur.data != "(") throw cur;
+    if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
     GetToken();
 
     Exp();
 
-    if (cur.data != ")") throw cur;
+    if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
 
     Operator();
@@ -61,84 +65,85 @@ void SA::Enumeration() {
 }
 
 void SA::Struct() {
-    if (cur.data != "struct") throw cur;
+    if (cur.data != "struct") throw ExpectedSymbol(row, col, "struct", cur.data.c_str());
     GetToken();
 
     Name();
-    if (cur.data != "{") throw cur;
+    if (cur.data != "{") throw ExpectedSymbol(row, col, "{", cur.data.c_str());
     GetToken();
 
     if (cur.data == "}") {
         GetToken();
-        if (cur.data != ";") throw cur;
+        if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
         return;
     }
 
-    Definition();
-    while (cur.data == ",") {
-        GetToken();
-        Definition();
-    }
+    StructBody();
 
-    if (cur.data != "{") throw cur;
+    if (cur.data != "}") throw ExpectedSymbol(row, col, "}", cur.data.c_str());
     GetToken();
-    if (cur.data != ";") throw cur;
+    if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
     GetToken();
-    return;
 }
 
 void SA::Type() {
     if (cur.data == "int" || cur.data == "bool" ||
         cur.data == "char" || cur.data == "double") {
         GetToken();
-        return;
+    } else if (first_equals("name", cur.data)) {
+        Name();
+    } else {
+        throw Error(row, col, "Declared types have to begin with letter or _ -> " + cur.data);
     }
-    throw cur;
 }
 
 void SA::Block() {
-    if (cur.data != "{") throw cur;
+    if (cur.data != "{") throw ExpectedSymbol(row, col, "{", cur.data.c_str());
     GetToken();
 
     while (first_equals("operator", cur.data))
         Operator();
 
-    if (cur.data != "}") throw cur;
+    if (cur.data != "}") throw ExpectedSymbol(row, col, "}", cur.data.c_str());
     GetToken();
     return;
 }
 
 void SA::For() {
-    if (cur.data != "for") throw cur;
+    if (cur.data != "for") throw ExpectedSymbol(row, col, "for", cur.data.c_str());
     GetToken();
-    if (cur.data != "(") throw cur;
+    if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
     GetToken();
 
-    Definition();
-    if (cur.data != ";") throw cur;
+    if (first_equals("exp", cur.data)) {
+        Exp();
+    } else {
+        Definition();
+    }
+    if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
     GetToken();
 
     Exp();
-    if (cur.data != ";") throw cur;
+    if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
     GetToken();
 
     Exp();
-    if (cur.data != ")") throw cur;
+    if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
 
     Operator();
 }
 
 void SA::If() {
-    if (cur.data != "if") throw cur;
+    if (cur.data != "if") throw ExpectedSymbol(row, col, "if", cur.data.c_str());
     GetToken();
-    if (cur.data != "(") throw cur;
+    if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
     GetToken();
 
     Exp();
 
-    if (cur.data != ")") throw cur;
+    if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
 
     Operator();
@@ -160,10 +165,20 @@ void SA::Operator() {
         Block();
     } else if (first_equals("exp", cur.data)) {
         Exp();
-        if (cur.data != ";") throw cur;
+        if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
+    } else if (first_equals("definition", cur.data)) {
+        Definition();
+        if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
+        GetToken();
+    } else if (first_equals("return", cur.data)) {
+        Return();
+    } else if (first_equals("try", cur.data)) {
+        Try();
+    } else if (first_equals("_code_", cur.data)) {
+        CodeBlock();
     } else {
-        throw cur;
+        throw Error(row, col, "Unknown operator -> " + cur.data);
     }
 }
 
@@ -172,39 +187,38 @@ void SA::Name() {
         GetToken();
         return;
     } else {
-        throw cur;
+        throw Error(row, col, "It is not name -> " + cur.data);
     }
 }
 
 void SA::Params() {
-    Type();
+    EEEType();
     Name();
     while (cur.data == ",") {
         GetToken();
         Params();
     }
-    return;
 }
 
 void SA::Func() {
-    Type();
+    EEEType();
     Name();
 
-    if (cur.data != "(") throw cur;
+    if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
     GetToken();
 
     if (cur.data != ")") {
         Params();
     }
 
-    if (cur.data != ")") throw cur;
+    if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
 
     Block();
 }
 
 void SA::Import() {
-    if (cur.data != "import") throw cur;
+    if (cur.data != "import") throw ExpectedSymbol(row, col, "import", cur.data.c_str());
     GetToken();
     Name();
 }
@@ -225,7 +239,7 @@ void SA::Program() {
     } else if (cur.data.empty()) {
         return;
     }
-    throw cur;
+    throw ExpectedSymbol(row, col, "Incorrect program structure\n");
 }
 
 void SA::GetToken() {
@@ -234,6 +248,15 @@ void SA::GetToken() {
         return;
     }
     cur = tokens[ind++];
+    col += cur.data.size();
+    if (cur.data == " ") {
+        GetToken();
+    }
+    if (cur.data == "\n") {
+        col = 1;
+        row++;
+        GetToken();
+    }
 }
 
 bool SA::first_equals(std::string str, std::string target) {
@@ -252,7 +275,7 @@ void SA::Prior1() {
 
         Exp();
 
-        if (cur.data != ")") throw cur;
+        if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
         GetToken();
     } else {
         Name();
@@ -264,14 +287,14 @@ void SA::Prior1() {
                 Enumeration();
             }
 
-            if (cur.data != ")") throw cur;
+            if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
             GetToken();
         } else if (cur.data == "[") {
             GetToken();
 
             Exp();
 
-            if(cur.data != "]") throw cur;
+            if(cur.data != "]") throw ExpectedSymbol(row, col, "]", cur.data.c_str());
             GetToken();
         } else if (cur.data == ".") {
             GetToken();
@@ -291,7 +314,7 @@ void SA::Prior2() {
         if (first_equals("prior1", cur.data)) {
             Prior1();
         } else {
-            if (cur.type != Integer && cur.type != Float) throw cur;
+            if (cur.type != Integer && cur.type != Float) throw ExpectedSymbol(row, col, "Constant", cur.data.c_str());
             GetToken();
         }
     }
@@ -385,6 +408,124 @@ void SA::Exp() {
     if (cur.data == ",") {
         GetToken();
         Exp();
+    }
+}
+
+void SA::EType() {
+    Type();
+    while (cur.data == "[") {
+        GetToken();
+        if (cur.data != "]") throw ExpectedSymbol(row, col, "]", cur.data.c_str());
+        GetToken();
+    }
+}
+
+void SA::EEType() {
+    EType();
+    while (cur.data == "*") {
+        GetToken();
+    }
+}
+
+void SA::EEEType() {
+    EEType();
+    if (cur.data == "&&" || cur.data == "&") {
+        GetToken();
+    }
+}
+
+void SA::Return() {
+    if (cur.data != "return") throw ExpectedSymbol(row, col, "return", cur.data.c_str());
+    GetToken();
+
+    if (cur.data != ";") Exp();
+    if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
+    GetToken();
+}
+
+void SA::StructBody() {
+    int ind_mem = ind;
+    Token tok_mem = cur;
+    EEEType();
+    Name();
+    ind = ind_mem;
+    if (cur.data == "(") {
+        cur = tok_mem;
+        Func();
+    } else  {
+        cur = tok_mem;
+        Definition();
+        if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
+        GetToken();
+    }
+    if (cur.data == "}") return;
+    StructBody();
+}
+
+void SA::Try() {
+    if (cur.data != "try") throw ExpectedSymbol(row, col, "try", cur.data.c_str());
+    GetToken();
+
+    Block();
+    if (cur.data != "catch") return;
+
+    while (cur.data == "catch") {
+        GetToken();
+        if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
+        GetToken();
+
+        if (cur.data == ".") break;
+        Definition();
+
+        if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
+        GetToken();
+
+        Block();
+        if (cur.data != "catch") return;
+    }
+
+    for (int i = 0; i < 3; ++i) {
+        if (cur.data != ".") throw ExpectedSymbol(row, col, ".", cur.data.c_str());
+        GetToken();
+    }
+
+    if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
+    GetToken();
+
+    Block();
+}
+
+void SA::CodeBlock() {
+    if (cur.data != "_code_") throw ExpectedSymbol(row, col, "_code_", cur.data.c_str());
+    GetToken();
+
+    if (cur.data == "[") {
+        GetToken();
+        Exp();
+        if (cur.data != "]") throw ExpectedSymbol(row, col, "]", cur.data.c_str());
+        GetToken();
+
+        if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
+        GetToken();
+
+        Name();
+
+        if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
+        GetToken();
+    } else {
+        if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
+        GetToken();
+
+        Name();
+
+        if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
+        GetToken();
+
+        while (cur.data != "_endcode_") {
+            GetToken();
+            if (cur.type == -1) throw ExpectedSymbol(row, col, "_endcode_", cur.data.c_str());
+        }
+        GetToken();
     }
 }
 

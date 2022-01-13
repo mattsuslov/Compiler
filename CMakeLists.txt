@@ -3,4 +3,4 @@ project(Compiler)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(Compiler main.cpp LA.cpp SA.cpp LA.h SA.h)
+add_executable(Compiler main.cpp LA.cpp SA.cpp LA.h SA.h Error.cpp Error.h)

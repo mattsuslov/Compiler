@@ -49,7 +49,7 @@ public:
 		int pos = 0;
 		while (pos < input.size()) {
 			auto tok = read_token(pos);
-			if (tok.data == " " || tok.data == "\n" || tok.data == "" || tok.data[0] == 0 || tok.data == "\t") continue;
+			if (tok.data == "" || tok.data[0] == 0 || tok.data == "\t") continue;
 			res.push_back(tok); // @suppress("Invalid arguments")
 		}
 		return res;

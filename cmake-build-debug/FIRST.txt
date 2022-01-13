@@ -1,5 +1,5 @@
-{type -> int bool char double}
-{operator -> for while if block exp}
+{type -> int bool char double name}
+{operator -> for while if block exp definition return try _code_}
 {exp -> prior12}
 {prior12 -> prior11}
 {prior11 -> prior10}
@@ -14,4 +14,5 @@
 {prior2 -> prior1 ++ -- + - * &}
 {prior1 -> ( name}
 {block -> { }
+{definition -> type}
 

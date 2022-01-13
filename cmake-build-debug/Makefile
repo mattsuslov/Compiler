@@ -143,6 +143,33 @@ Compiler/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Compiler.dir/build.make CMakeFiles/Compiler.dir/build
 .PHONY : Compiler/fast
 
+Error.o: Error.cpp.o
+
+.PHONY : Error.o
+
+# target to build an object file
+Error.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Compiler.dir/build.make CMakeFiles/Compiler.dir/Error.cpp.o
+.PHONY : Error.cpp.o
+
+Error.i: Error.cpp.i
+
+.PHONY : Error.i
+
+# target to preprocess a source file
+Error.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Compiler.dir/build.make CMakeFiles/Compiler.dir/Error.cpp.i
+.PHONY : Error.cpp.i
+
+Error.s: Error.cpp.s
+
+.PHONY : Error.s
+
+# target to generate assembly for a file
+Error.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Compiler.dir/build.make CMakeFiles/Compiler.dir/Error.cpp.s
+.PHONY : Error.cpp.s
+
 LA.o: LA.cpp.o
 
 .PHONY : LA.o
@@ -233,6 +260,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... Compiler"
+	@echo "... Error.o"
+	@echo "... Error.i"
+	@echo "... Error.s"
 	@echo "... LA.o"
 	@echo "... LA.i"
 	@echo "... LA.s"

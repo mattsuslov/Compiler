@@ -80,6 +80,12 @@
 				</MakeCommands>
 			</Target>
 		</Build>
+		<Unit filename="/Users/matt/CLionProjects/Compiler/Error.cpp">
+			<Option target="Compiler"/>
+		</Unit>
+		<Unit filename="/Users/matt/CLionProjects/Compiler/Error.h">
+			<Option target="Compiler"/>
+		</Unit>
 		<Unit filename="/Users/matt/CLionProjects/Compiler/LA.cpp">
 			<Option target="Compiler"/>
 		</Unit>

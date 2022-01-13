@@ -6,6 +6,12 @@
 
 #IncludeRegexTransform: 
 
+/Users/matt/CLionProjects/Compiler/Error.h
+iostream
+-
+exception
+-
+
 /Users/matt/CLionProjects/Compiler/SA.cpp
 SA.h
 /Users/matt/CLionProjects/Compiler/SA.h
@@ -15,6 +21,8 @@ iostream
 -
 Token.h
 /Users/matt/CLionProjects/Compiler/Token.h
+Error.h
+/Users/matt/CLionProjects/Compiler/Error.h
 
 /Users/matt/CLionProjects/Compiler/SA.h
 iostream

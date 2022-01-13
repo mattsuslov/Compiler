@@ -1,8 +1,13 @@
 int main() {
     for (int i = 0; i < n; ++i) {
-        1*1;
+        print();
     }
-    while (100) {
-        m = 10;
+    if (a == 01) {
+        print(hello);
     }
+    try {
+        asdadads[1];(1);
+    }
+    asdasda;
+    return;
 }

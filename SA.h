@@ -19,6 +19,7 @@ public:
 private:
 	Token cur;
 	int ind = 0;
+	int row = 1, col = 1;
 	std::vector<Token> tokens;
     std::map<std::string, std::vector<std::string>> first_;
     bool first_equals(std::string first, std::string target);
@@ -28,12 +29,19 @@ private:
     void Program();
 
     void Struct();
+    void StructBody();
     void Import();
 
     void Func();
     void Type();
+    void EType();
+    void EEType();
+    void EEEType();
     void Name();
     void Params();
+
+    void Try();
+    void CodeBlock();
 
     void Block();
     void Operator();
@@ -41,6 +49,7 @@ private:
     void Definition();
     void If();
     void While();
+    void Return();
 
     void Prior1();
     void Prior2();
