@@ -4,25 +4,29 @@
 #include <iostream>
 #include <vector>
 #include <fstream>
-#include <map>
+#include <unordered_map>
 #include "Token.h"
 
 class FIRSTConstructor {
 public:
-    FIRSTConstructor(const std::string& filename, std::map<std::string, std::vector<std::string>>& f);
+    FIRSTConstructor(const std::string& filename, std::unordered_map<std::string, std::vector<std::string>>& f);
 };
 
 class SA {
 public:
-	SA(const std::vector<Token>& t);
+	SA();
+	void analize();
+
+	void operator()() {
+	    analize();
+	}
 
 private:
 	Token cur;
 	int ind = 0;
 	int row = 1, col = 1;
-	std::vector<Token> tokens;
-    std::map<std::string, std::vector<std::string>> first_;
-    bool first_equals(std::string first, std::string target);
+    std::unordered_map<std::string, std::vector<std::string>> first_;
+    bool first_equals(const std::string& str, const std::string& target);
     void GetToken();
 
     //Grammar

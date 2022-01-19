@@ -2,7 +2,8 @@
 #define TOKEN_H_
 
 #include <string>
-
+#include <queue>
+#include <thread>
 
 enum {
 	Res,
@@ -20,10 +21,20 @@ enum {
 	NotTerm
 };
 
+enum  {
+    Wait,
+    Go,
+    End
+};
+
 class Token {
 public:
 	std::string data = "";
 	int type = Other;
+
+    static std::vector<Token> tokens;
+    static int state;
+    static std::mutex mutex;
 };
 
 

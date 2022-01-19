@@ -1,7 +1,3 @@
-//
-// Created by Matwey on 13/01/2022.
-//
-
 #include "Error.h"
 
 std::ostream& operator<<(std::ostream& os, const Error& err) {

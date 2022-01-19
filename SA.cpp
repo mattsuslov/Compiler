@@ -4,20 +4,8 @@
 #include "Token.h"
 #include "Error.h"
 
-SA::SA(const std::vector<Token>& t) {
-    tokens = t;
+SA::SA() {
     FIRSTConstructor("FIRST.txt", first_);
-	GetToken();
-	try {
-		Program();
-	} catch (const Error& e) {
-	    std::cout << e;
-	    return;
-	} catch (const Token& c) {
-		std::cout << "ERROR: Undefined " << c.data << std::endl;
-		return;
-	}
-	std::cout << "OK";
 }
 
 void SA::Definition() {
@@ -155,15 +143,7 @@ void SA::If() {
 }
 
 void SA::Operator() {
-    if (first_equals("for", cur.data)) {
-        For();
-    } else if (first_equals("while", cur.data)) {
-        While();
-    } else if (first_equals("if", cur.data)) {
-        If();
-    } else if (first_equals("block", cur.data)) {
-        Block();
-    } else if (first_equals("exp", cur.data)) {
+    if (first_equals("exp", cur.data)) {
         Exp();
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
@@ -171,12 +151,20 @@ void SA::Operator() {
         Definition();
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
-    } else if (first_equals("return", cur.data)) {
-        Return();
+    } else if (first_equals("block", cur.data)) {
+        Block();
+    }  else if (first_equals("for", cur.data)) {
+        For();
+    } else if (first_equals("while", cur.data)) {
+        While();
+    } else if (first_equals("if", cur.data)) {
+        If();
     } else if (first_equals("try", cur.data)) {
         Try();
     } else if (first_equals("_code_", cur.data)) {
         CodeBlock();
+    } else if (first_equals("return", cur.data)) {
+        Return();
     } else {
         throw Error(row, col, "Unknown operator -> " + cur.data);
     }
@@ -224,30 +212,34 @@ void SA::Import() {
 }
 
 void SA::Program() {
-    if (first_equals("type", cur.data)) {
-        Func();
-        Program();
-        return;
-    } else if (first_equals("struct", cur.data)) {
-        Struct();
-        Program();
-        return;
-    } else if (first_equals("import", cur.data)) {
-        Import();
-        Program();
-        return;
-    } else if (cur.data.empty()) {
-        return;
+    while (!cur.data.empty()) {
+        if (first_equals("type", cur.data)) {
+            Func();
+        } else if (first_equals("struct", cur.data)) {
+            Struct();
+        } else if (first_equals("import", cur.data)) {
+            Import();
+        } else {
+            throw ExpectedSymbol(row, col, "Incorrect program structure\n");
+        }
     }
-    throw ExpectedSymbol(row, col, "Incorrect program structure\n");
+
 }
 
 void SA::GetToken() {
-    if (ind == tokens.size()) {
+    Token::mutex.lock();
+    if (ind == Token::tokens.size() && Token::state == Go) {
+        Token::state = Wait;
+    }
+    Token::mutex.unlock();
+    while (Token::state == Wait) {}
+    if (Token::state == End && ind == Token::tokens.size()) {
         cur.data = "", cur.type = -1;
         return;
     }
-    cur = tokens[ind++];
+    Token::mutex.lock();
+    cur = Token::tokens[ind++];
+    Token::mutex.unlock();
     col += cur.data.size();
     if (cur.data == " ") {
         GetToken();
@@ -259,12 +251,15 @@ void SA::GetToken() {
     }
 }
 
-bool SA::first_equals(std::string str, std::string target) {
-    if (str == "name") return cur.type == 1; // 1 - name
-    if (str == "const") return cur.type == Integer || cur.type == Float;
-    if (first_[str].empty()) return str == target;
+bool SA::first_equals(const std::string& str, const std::string& target) {
+    if (str == "name") return cur.type == 1;
+    if (str == "const") return (cur.type == Integer || cur.type == Float);
+    if (str == target) return true;
     for (int i = 0; i < first_[str].size(); ++i) {
-        if (first_equals(first_[str][i], target)) return true;
+        auto& el = first_[str][i];
+        if (el == "name" && cur.type == 1) return true;
+        if (el == "const" && (cur.type == Integer || cur.type == Float)) return true;
+        if (el == target) return true;
     }
     return false;
 }
@@ -529,8 +524,26 @@ void SA::CodeBlock() {
     }
 }
 
+void SA::analize() {
+    std::cout << "Anlizing..." << std::endl;
+    auto st_time = std::chrono::high_resolution_clock::now();
+    GetToken();
+    try {
+        Program();
+    } catch (const Error& e) {
+        std::cout << e;
+        return;
+    } catch (const Token& c) {
+        std::cout << "ERROR: Undefined " << c.data << std::endl;
+        return;
+    }
+    auto end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<float> tim = end_time - st_time;
+    std::cout << "Anlizing time: " << tim.count() << std::endl;
+}
 
-FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::map<std::string, std::vector<std::string>> &f) {
+
+FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::unordered_map<std::string, std::vector<std::string>> &f) {
     std::ifstream in(filename, std::ios::binary | std::ios::ate);
     auto size = in.tellg();
     std::string input(size, '\0');
@@ -560,4 +573,26 @@ FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::map<std::st
             f[from].push_back(word);
         }
     }
+
+    for (auto& p: f) {
+        bool flag = true;
+        while (flag) {
+            flag = false;
+            auto& vec = p.second;
+            auto key = p.first;
+            std::vector<std::string> nvec;
+            for (const std::string& str: vec) {
+                if (!f[str].empty()) {
+                    flag = true;
+                    for (int i = 0; i < f[str].size(); ++i) {
+                        nvec.push_back(f[str][i]);
+                    }
+                } else {
+                    nvec.push_back(str);
+                }
+            }
+            f[key] = nvec;
+        }
+    }
+
 }

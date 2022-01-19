@@ -3,9 +3,102 @@
 
 LA::LA() {
 	load_input();
-	clear_comments();
+//	clear_comments();
 	load_reserved_words();
 	sfm = DFSMConstructor("DFSM.txt").getRoot();
+}
+
+void LA::fact_to_tokens() {
+    int pos = 0;
+    while (pos < input.size()) {
+        auto tok = read_token(pos);
+        if (tok.data.empty() || tok.data[0] == 0 || tok.data == "\t") continue;
+        Token::mutex.lock();
+        Token::tokens.push_back(tok);
+        Token::state = Go;
+        Token::mutex.unlock();
+    }
+    Token::mutex.lock();
+    Token::state = End;
+    Token::mutex.unlock();
+}
+
+void LA::print_tokens(std::ostream &out, const std::vector<Token> &vec) const {
+    for (Token tok: vec) {
+        out << tok.data << " - " << get_type_name(tok.type) << '\n';
+    }
+}
+
+Token LA::read_token(int &pos) {
+    pos = std::max(0, pos);
+    Token token;
+    Statement* ptr = sfm;
+    while (pos < input.size() && ptr && ptr->term == NotTerm) {
+        token.data += input[pos];
+        ptr = ptr->next[input[pos]];
+        ++pos;
+    }
+    if (ptr && ptr->term == OneLetter) {
+        --pos;
+        token.data.pop_back();
+    }
+    if (ptr) token.type = ptr->ret_type;
+    if (token.type == Name && reserved_words.count(token.data)) {
+        token.type = Res;
+    }
+    return token;
+}
+
+std::string LA::get_type_name(int type) const {
+    switch (type) {
+        case Res:
+            return "Reserved word";
+        case Name:
+            return "Name";
+        case Float:
+            return "Float";
+        case Integer:
+            return "Integer";
+        case Oper:
+            return "Operator";
+        case Punct:
+            return "Punctuation";
+        case Other:
+            return "Other";
+        default:
+            break;
+    }
+    return "Unknown";
+}
+
+void LA::read_code(std::istream &in) {
+    unsigned long long size = in.tellg();
+    input.assign(size + 1, '\0');
+    in.seekg(0);
+    if (!in.read(&input[0], size)) {
+        throw std::runtime_error("Can't open input file");
+    }
+}
+
+void LA::clear_comments() {
+    std::regex r = std::regex(R"((?://.*)|(/\*(?:.|[\n\r])*?\*/))");
+    std::string out(input.size(), '\0');
+    out[out.size() - 1] = '\n';
+    std::regex_replace(&out[0], input.begin(), input.end(), r, "\n");
+    input = out;
+}
+
+void LA::load_input() {
+    std::ifstream ifile("test1.txt", std::ios::binary | std::ios::ate);
+    read_code(ifile);
+}
+
+void LA::load_reserved_words() {
+    std::ifstream ifile("reserved.txt");
+    std::string word;
+    while (ifile >> word) {
+        reserved_words.insert(word);
+    }
 }
 
 DFSMConstructor::DFSMConstructor(const std::string& filename) {
@@ -65,5 +158,20 @@ DFSMConstructor::DFSMConstructor(const std::string& filename) {
 
 
     root = m["ROOT"];
+}
+
+Statement *DFSMConstructor::getRoot() const {
+    return root;
+}
+
+int DFSMConstructor::getTypeByName(const std::string &name) {
+    if (name == "Res") return Res;
+    if (name == "Var") return Name;
+    if (name == "Float") return Float;
+    if (name == "Integer") return Integer;
+    if (name == "Oper") return Oper;
+    if (name == "Punct") return Punct;
+    if (name == "Other") return Other;
+    return Other;
 }
 

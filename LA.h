@@ -20,124 +20,40 @@ struct Statement {
 class DFSMConstructor {
 public:
     DFSMConstructor(const std::string& filename);
-
-    Statement* getRoot() const {
-        return root;
-    }
+    Statement* getRoot() const;
 
 private:
     Statement* root;
-
-    int getTypeByName(const std::string& name) {
-        if (name == "Res") return Res;
-        if (name == "Var") return Name;
-        if (name == "Float") return Float;
-        if (name == "Integer") return Integer;
-        if (name == "Oper") return Oper;
-        if (name == "Punct") return Punct;
-        if (name == "Other") return Other;
-        return Other;
-    }
+    int getTypeByName(const std::string& name);
 };
 
 class LA {
 public:
 	LA();
+    void fact_to_tokens();
+	void print_tokens(std::ostream& out, const std::vector<Token>& vec) const;
 
-	std::vector<Token> fact_to_tokens() {
-		std::vector<Token> res;
-		int pos = 0;
-		while (pos < input.size()) {
-			auto tok = read_token(pos);
-			if (tok.data == "" || tok.data[0] == 0 || tok.data == "\t") continue;
-			res.push_back(tok); // @suppress("Invalid arguments")
-		}
-		return res;
-	}
+    void operator()() {
+        std::cout << "Factorization..." << std::endl;
+        auto st_time = std::chrono::high_resolution_clock::now();
 
-	void print_tokens(std::ostream& out, const std::vector<Token>& vec) const {
-		for (Token tok: vec) {
-			out << tok.data << " - " << get_type_name(tok.type) << '\n';
-		}
-	}
+        fact_to_tokens();
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> tim = end_time - st_time;
+        std::cout << std::fixed << "Factorization time: " << tim.count() << std::endl;
+    }
 
 private:
 	std::set<std::string> reserved_words;
 	Statement* sfm = nullptr;
 	std::string input = "";
-
-	Token read_token(int& pos) {
-		pos = std::max(0, pos);
-		Token token;
-		Statement* ptr = sfm;
-		while (pos < input.size() && ptr && ptr->term == NotTerm) {
-			token.data += input[pos];
-			ptr = ptr->next[(u_char)input[pos]];
-			++pos;
-		}
-		if (ptr && ptr->term == OneLetter) {
-			--pos;
-			token.data.pop_back();
-		}
-		if (ptr) token.type = ptr->ret_type;
-		if (token.type == Name && reserved_words.count(token.data)) {
-			token.type = Res;
-		}
-		return token;
-	}
-
-	std::string get_type_name(int type) const {
-		switch (type) {
-		case Res:
-			return "Reserved word";
-		case Name:
-			return "Name";
-		case Float:
-			return "Float";
-		case Integer:
-			return "Integer";
-		case Oper:
-			return "Operator";
-		case Punct:
-			return "Punctuation";
-		case Other:
-			return "Other";
-		default:
-			break;
-		}
-		return "Unknown";
-	}
-
-	void read_code(std::istream& in) {
-		unsigned long long size = in.tellg();
-		input.assign(size + 1, '\0');
-		in.seekg(0);
-		if (!in.read(&input[0], size)) {
-			throw std::runtime_error("Can't open input file");
-		}
-	}
-
-
-	void clear_comments() {
-		std::regex r = std::regex(R"((?://.*)|(/\*(?:.|[\n\r])*?\*/))");
-		std::string out(input.size(), '\0');
-		out[out.size() - 1] = '\n';
-		std::regex_replace(&out[0], input.begin(), input.end(), r, "\n");
-		input = out;
-	}
-
-	void load_input() {
-		std::ifstream ifile("input.txt", std::ios::binary | std::ios::ate);
-		read_code(ifile);
-	}
-
-	void load_reserved_words() {
-		std::ifstream ifile("reserved.txt");
-		std::string word;
-		while (ifile >> word) {
-			reserved_words.insert(word);
-		}
-	}
+	Token read_token(int& pos);
+	std::string get_type_name(int type) const;
+	void read_code(std::istream& in);
+	void clear_comments();
+	void load_input();
+	void load_reserved_words();
 };
 
 #endif /* LA_H_ */
