@@ -18,12 +18,12 @@ void test() {
     LA la = LA();
     SA sa = SA();
 
-//    la();
-//    sa();
-    std::thread la_th = std::thread( la );
-    std::thread sa_th = std::thread( sa );
-    la_th.join();
-    sa_th.join();
+    la();
+    sa();
+//    std::thread la_th = std::thread( la );
+//    std::thread sa_th = std::thread( sa );
+//    la_th.join();
+//    sa_th.join();
 
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float> tim = end_time - st_time;

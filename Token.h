@@ -7,7 +7,7 @@
 
 enum {
 	Res,
-	Name,
+	Name = 1,
 	Float,
 	Integer,
 	Oper,

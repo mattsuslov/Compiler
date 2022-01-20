@@ -1,8 +1,8 @@
-January 20, 2022 21:36:36 message: Test started.
-January 20, 2022 21:36:36 message: Factorization...
-January 20, 2022 21:36:36 message: Anlizing...
-January 20, 2022 21:36:36 message: Factorization time: 0.000274
-January 20, 2022 21:36:36 message: Anlizing time: 0.000494
-January 20, 2022 21:36:36 message: Total time: 0.009380
-January 20, 2022 21:36:36 message: Testing time: 0.010144
-January 20, 2022 21:36:36 message: Average: 0.009380
+January 20, 2022 22:54:20 message: Test started.
+January 20, 2022 22:54:20 message: Factorization...
+January 20, 2022 22:54:20 message: Factorization time: 0.000055
+January 20, 2022 22:54:20 message: Anlizing...
+January 20, 2022 22:54:20 message: Anlizing time: 0.000124
+January 20, 2022 22:54:20 message: Total time: 0.039362
+January 20, 2022 22:54:20 message: Testing time: 0.040196
+January 20, 2022 22:54:20 message: Average: 0.039362

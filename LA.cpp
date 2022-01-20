@@ -12,7 +12,7 @@ void LA::fact_to_tokens() {
     int pos = 0;
     while (pos < input.size()) {
         auto tok = read_token(pos);
-        if (tok.data.empty() || tok.data[0] == 0 || tok.data == "\t" || tok.type == Comment) continue;
+        if (tok.data.empty() || tok.data[0] == 0 || tok.data == "\t") continue;
         Token::mutex.lock();
         Token::tokens.push_back(tok);
         Token::state = Go;
