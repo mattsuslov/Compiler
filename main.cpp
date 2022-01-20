@@ -1,6 +1,7 @@
 #include "LA.h"
 #include "SA.h"
 #include <thread>
+#include "Logger.h"
 
 double sum = 0;
 std::vector<Token> Token::tokens = std::vector<Token>();
@@ -8,6 +9,7 @@ int Token::state = Wait;
 std::mutex Token::mutex = std::mutex();
 
 void test() {
+    Logger::log("Test started.");
     Token::tokens.clear();
     Token::state = Wait;
 
@@ -16,23 +18,21 @@ void test() {
     LA la = LA();
     SA sa = SA();
 
-    la();
-    sa();
-//    std::thread la_th = std::thread( la );
-//    std::thread sa_th = std::thread( sa );
-//    la_th.join();
-//    sa_th.join();
+//    la();
+//    sa();
+    std::thread la_th = std::thread( la );
+    std::thread sa_th = std::thread( sa );
+    la_th.join();
+    sa_th.join();
 
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float> tim = end_time - st_time;
-    std::cout << tim.count() << std::endl;
+    Logger::log("Total time: " + std::to_string(tim.count()));
     sum += tim.count();
-    std::cout << "---------------" << std::endl;
 }
 
 int main() {
-    freopen("test1_simple.txt", "w", stdout);
-    int N = 100;
+    int N = 1;
     std::cout << "N: " << N << std::endl;
     auto st_time = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; ++i) {
@@ -40,9 +40,9 @@ int main() {
     }
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float> tim = end_time - st_time;
-    std::cout << "Testing time: " << tim.count() << std::endl;
+    Logger::log("Testing time: " + std::to_string(tim.count()));
     sum /= N;
-    std::cout << "Average: " << sum << std::endl;
+    Logger::log("Average: " + std::to_string(sum));
 	return 0;
 }
 

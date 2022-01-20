@@ -12,6 +12,8 @@ enum {
 	Integer,
 	Oper,
 	Punct,
+	String,
+	Comment,
 	Other
 };
 
@@ -36,6 +38,8 @@ public:
     static int state;
     static std::mutex mutex;
 };
+
+
 
 
 #endif /* TOKEN_H_ */

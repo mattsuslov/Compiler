@@ -197,6 +197,33 @@ LA.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Compiler.dir/build.make CMakeFiles/Compiler.dir/LA.cpp.s
 .PHONY : LA.cpp.s
 
+Logger.o: Logger.cpp.o
+
+.PHONY : Logger.o
+
+# target to build an object file
+Logger.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Compiler.dir/build.make CMakeFiles/Compiler.dir/Logger.cpp.o
+.PHONY : Logger.cpp.o
+
+Logger.i: Logger.cpp.i
+
+.PHONY : Logger.i
+
+# target to preprocess a source file
+Logger.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Compiler.dir/build.make CMakeFiles/Compiler.dir/Logger.cpp.i
+.PHONY : Logger.cpp.i
+
+Logger.s: Logger.cpp.s
+
+.PHONY : Logger.s
+
+# target to generate assembly for a file
+Logger.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Compiler.dir/build.make CMakeFiles/Compiler.dir/Logger.cpp.s
+.PHONY : Logger.cpp.s
+
 SA.o: SA.cpp.o
 
 .PHONY : SA.o
@@ -266,6 +293,9 @@ help:
 	@echo "... LA.o"
 	@echo "... LA.i"
 	@echo "... LA.s"
+	@echo "... Logger.o"
+	@echo "... Logger.i"
+	@echo "... Logger.s"
 	@echo "... SA.o"
 	@echo "... SA.i"
 	@echo "... SA.s"

@@ -6,14 +6,21 @@ CMakeFiles/Compiler.dir/Error.cpp.o: ../Error.h
 
 CMakeFiles/Compiler.dir/LA.cpp.o: ../LA.cpp
 CMakeFiles/Compiler.dir/LA.cpp.o: ../LA.h
+CMakeFiles/Compiler.dir/LA.cpp.o: ../Logger.h
 CMakeFiles/Compiler.dir/LA.cpp.o: ../Token.h
 
+CMakeFiles/Compiler.dir/Logger.cpp.o: ../Error.h
+CMakeFiles/Compiler.dir/Logger.cpp.o: ../Logger.cpp
+CMakeFiles/Compiler.dir/Logger.cpp.o: ../Logger.h
+
 CMakeFiles/Compiler.dir/SA.cpp.o: ../Error.h
+CMakeFiles/Compiler.dir/SA.cpp.o: ../Logger.h
 CMakeFiles/Compiler.dir/SA.cpp.o: ../SA.cpp
 CMakeFiles/Compiler.dir/SA.cpp.o: ../SA.h
 CMakeFiles/Compiler.dir/SA.cpp.o: ../Token.h
 
 CMakeFiles/Compiler.dir/main.cpp.o: ../LA.h
+CMakeFiles/Compiler.dir/main.cpp.o: ../Logger.h
 CMakeFiles/Compiler.dir/main.cpp.o: ../SA.h
 CMakeFiles/Compiler.dir/main.cpp.o: ../Token.h
 CMakeFiles/Compiler.dir/main.cpp.o: ../main.cpp

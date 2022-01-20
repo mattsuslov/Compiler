@@ -3,6 +3,7 @@
 #include <iostream>
 #include "Token.h"
 #include "Error.h"
+#include "Logger.h"
 
 SA::SA() {
     FIRSTConstructor("FIRST.txt", first_);
@@ -77,7 +78,7 @@ void SA::Struct() {
 
 void SA::Type() {
     if (cur.data == "int" || cur.data == "bool" ||
-        cur.data == "char" || cur.data == "double") {
+        cur.data == "char" || cur.data == "double" || cur.data == "void" || cur.data == "float") {
         GetToken();
     } else if (first_equals("name", cur.data)) {
         Name();
@@ -253,16 +254,17 @@ void SA::GetToken() {
 
 bool SA::first_equals(const std::string& str, const std::string& target) {
     if (str == "name") return cur.type == 1;
-    if (str == "const") return (cur.type == Integer || cur.type == Float);
+    if (str == "const") return (cur.type == Integer || cur.type == Float || cur.type == String);
     if (str == target) return true;
     for (int i = 0; i < first_[str].size(); ++i) {
         auto& el = first_[str][i];
         if (el == "name" && cur.type == 1) return true;
-        if (el == "const" && (cur.type == Integer || cur.type == Float)) return true;
+        if (el == "const" && (cur.type == Integer || cur.type == Float || cur.type == String)) return true;
         if (el == target) return true;
     }
     return false;
 }
+
 
 void SA::Prior1() {
     if (cur.data == "(") {
@@ -309,7 +311,7 @@ void SA::Prior2() {
         if (first_equals("prior1", cur.data)) {
             Prior1();
         } else {
-            if (cur.type != Integer && cur.type != Float) throw ExpectedSymbol(row, col, "Constant", cur.data.c_str());
+            if (cur.type != Integer && cur.type != Float && cur.type != String) throw ExpectedSymbol(row, col, "Constant", cur.data.c_str());
             GetToken();
         }
     }
@@ -525,7 +527,7 @@ void SA::CodeBlock() {
 }
 
 void SA::analize() {
-    std::cout << "Anlizing..." << std::endl;
+    Logger::log("Anlizing...");
     auto st_time = std::chrono::high_resolution_clock::now();
     GetToken();
     try {
@@ -533,13 +535,13 @@ void SA::analize() {
     } catch (const Error& e) {
         std::cout << e;
         return;
-    } catch (const Token& c) {
-        std::cout << "ERROR: Undefined " << c.data << std::endl;
+    } catch (...) {
+        std::cout << "ERROR: Undefined " << std::endl;
         return;
     }
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float> tim = end_time - st_time;
-    std::cout << "Anlizing time: " << tim.count() << std::endl;
+    Logger::log("Anlizing time: " + std::to_string(tim.count()));
 }
 
 

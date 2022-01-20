@@ -1,4 +1,4 @@
-{type -> int bool char double name}
+{type -> int bool char double void float name}
 {operator -> for while if block exp definition return try _code_}
 {exp -> prior12}
 {prior12 -> prior11}

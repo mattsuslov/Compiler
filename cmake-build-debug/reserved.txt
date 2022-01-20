@@ -9,6 +9,8 @@ int
 bool
 double
 void
+float
+char
 goto
 try
 _code_

@@ -6,6 +6,10 @@
 
 #IncludeRegexTransform: 
 
+/Users/matt/CLionProjects/Compiler/LA.cpp
+LA.h
+/Users/matt/CLionProjects/Compiler/LA.h
+
 /Users/matt/CLionProjects/Compiler/LA.h
 iostream
 -
@@ -23,34 +27,22 @@ fstream
 -
 map
 -
+Logger.h
+/Users/matt/CLionProjects/Compiler/Logger.h
 Token.h
 /Users/matt/CLionProjects/Compiler/Token.h
 
-/Users/matt/CLionProjects/Compiler/SA.h
-iostream
--
-vector
--
+/Users/matt/CLionProjects/Compiler/Logger.h
 fstream
 -
-unordered_map
+ctime
 -
-Token.h
-/Users/matt/CLionProjects/Compiler/Token.h
 
 /Users/matt/CLionProjects/Compiler/Token.h
 string
 -
 queue
 -
-thread
--
-
-/Users/matt/CLionProjects/Compiler/main.cpp
-LA.h
-/Users/matt/CLionProjects/Compiler/LA.h
-SA.h
-/Users/matt/CLionProjects/Compiler/SA.h
 thread
 -
 

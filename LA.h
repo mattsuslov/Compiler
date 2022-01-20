@@ -9,6 +9,7 @@
 #include <regex>
 #include <fstream>
 #include <map>
+#include "Logger.h"
 #include "Token.h"
 
 struct Statement {
@@ -34,14 +35,14 @@ public:
 	void print_tokens(std::ostream& out, const std::vector<Token>& vec) const;
 
     void operator()() {
-        std::cout << "Factorization..." << std::endl;
+        Logger::log("Factorization...");
         auto st_time = std::chrono::high_resolution_clock::now();
 
         fact_to_tokens();
 
         auto end_time = std::chrono::high_resolution_clock::now();
         std::chrono::duration<float> tim = end_time - st_time;
-        std::cout << std::fixed << "Factorization time: " << tim.count() << std::endl;
+        Logger::log("Factorization time: " + std::to_string(tim.count()));
     }
 
 private:

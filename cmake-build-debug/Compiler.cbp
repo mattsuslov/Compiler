@@ -92,6 +92,12 @@
 		<Unit filename="/Users/matt/CLionProjects/Compiler/LA.h">
 			<Option target="Compiler"/>
 		</Unit>
+		<Unit filename="/Users/matt/CLionProjects/Compiler/Logger.cpp">
+			<Option target="Compiler"/>
+		</Unit>
+		<Unit filename="/Users/matt/CLionProjects/Compiler/Logger.h">
+			<Option target="Compiler"/>
+		</Unit>
 		<Unit filename="/Users/matt/CLionProjects/Compiler/SA.cpp">
 			<Option target="Compiler"/>
 		</Unit>

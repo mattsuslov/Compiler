@@ -12,7 +12,7 @@ void LA::fact_to_tokens() {
     int pos = 0;
     while (pos < input.size()) {
         auto tok = read_token(pos);
-        if (tok.data.empty() || tok.data[0] == 0 || tok.data == "\t") continue;
+        if (tok.data.empty() || tok.data[0] == 0 || tok.data == "\t" || tok.type == Comment) continue;
         Token::mutex.lock();
         Token::tokens.push_back(tok);
         Token::state = Go;
@@ -63,8 +63,12 @@ std::string LA::get_type_name(int type) const {
             return "Operator";
         case Punct:
             return "Punctuation";
+        case String:
+            return "String";
         case Other:
             return "Other";
+        case Comment:
+            return "Comment";
         default:
             break;
     }
@@ -89,7 +93,7 @@ void LA::clear_comments() {
 }
 
 void LA::load_input() {
-    std::ifstream ifile("test1.txt", std::ios::binary | std::ios::ate);
+    std::ifstream ifile("input.txt", std::ios::binary | std::ios::ate);
     read_code(ifile);
 }
 
@@ -126,6 +130,8 @@ DFSMConstructor::DFSMConstructor(const std::string& filename) {
             for (int i = 0; i < 256; ++i) {
                 f->next[i] = t;
             }
+        } else if (syms == "ENDL") {
+            f->next['\n'] = t;
         } else {
             for (u_char ch: syms) {
                 f->next[ch] = t;
@@ -172,6 +178,8 @@ int DFSMConstructor::getTypeByName(const std::string &name) {
     if (name == "Oper") return Oper;
     if (name == "Punct") return Punct;
     if (name == "Other") return Other;
+    if (name == "String") return String;
+    if (name == "Comment") return Comment;
     return Other;
 }
 

@@ -20,9 +20,23 @@
 {BIN? -> COMP &}
 {BIN? -> BININIT =}
 
-{ROOT -> OP? /*%^}
+{ROOT -> OP? *%^}
 {OP? -> OP ALL}
 {OP? -> OPINIT =}
+
+{ROOT -> SLASH /}
+{SLASH -> OP ALL}
+{SLASH -> OPINIT =}
+{SLASH -> COM? /}
+{COM? -> COM? ALL}
+{COM? -> COM ENDL}
+{SLASH -> BCOM? *}
+{BCOM? -> BCOM? ALL}
+{BCOM? -> END? *}
+{END? -> BCOM? ALL}
+{END? -> END? *}
+{END? -> COM /}
+
 
 {ROOT -> COMP? ><}
 {COMP? -> SOFTCOMP ALL}
@@ -46,6 +60,14 @@
 {OP3? -> DEC -}
 {OP3? -> OPINIT =}
 
+{ROOT -> SPEC_ON "}
+{SPEC_ON -> SPEC_ON ALL}
+{SPEC_ON -> SPEC_OFF \}
+{SPEC_OFF -> SPEC_ON ALL}
+{SPEC_ON -> STRING "}
+
+{COM - Nothing - Comment}
+{STRING - Nothing - String}
 {DEC - Nothing - Oper}
 {INC - Nothing - Oper}
 {SOFTCOMP - OneLetter - Oper}

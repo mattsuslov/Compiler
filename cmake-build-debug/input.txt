@@ -2,14 +2,16 @@ struct aaa {
     int asda() {
 
     }
-    int asdasd = 0;
+    void asdasd = "abcdef"; /*kjhkjhjk//***/
 };
+
 int main() {
     for (int i = 0; i < n; ++i) {
         print();
     }
     if (a == 1) {
-        print(hello);
+        print(hello); // asdadsasdads
+        a.a(10);
     }
     try {
         hello[1];
