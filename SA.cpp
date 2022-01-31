@@ -151,18 +151,29 @@ void SA::Operator() {
         Token mem_tok = cur;
         Name();
         if (first_equals("name", cur.data) || cur.data == "&" || cur.data == "*" || cur.data == "[") {
-            ind = mem_ind;
-            cur = mem_tok;
-            Definition();
-            if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
-            GetToken();
+            if (cur.data == "[") {
+                GetToken();
+                if (cur.data == "]") {
+                    ind = mem_ind;
+                    cur = mem_tok;
+                    Definition();
+                } else {
+                    ind = mem_ind;
+                    cur = mem_tok;
+                    Exp();
+                }
+            } else {
+                ind = mem_ind;
+                cur = mem_tok;
+                Definition();
+            }
         } else {
             ind = mem_ind;
             cur = mem_tok;
             Enumeration();
-            if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
-            GetToken();
         }
+        if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
+        GetToken();
     } else if (first_equals("exp", cur.data)) {
         Enumeration();
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());

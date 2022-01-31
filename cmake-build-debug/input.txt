@@ -6,3 +6,42 @@ struct nnn {
         return 10;
     }
 };
+
+int anss;
+
+
+int main() {
+    //a[exp][10];
+    //int[10][10] ana;
+    int* ans;
+    int& ans;
+    a[1];
+    print();
+    int abs = 0;
+    abcd;
+
+    if (abcd) {
+
+    } else if (ans) {
+
+    } else {
+
+    }
+
+    try {
+
+    } catch (int a) {
+
+    } catch (...) {
+
+    }
+
+    for (int i = 0; i < n; ++i) {
+
+    }
+
+    _code_ ["asda"] (cpp)
+    _code_ (asdad)
+    asdada jkj a dmak ma ..a /laj flkA Knfk kji we
+    _endcode_
+}
