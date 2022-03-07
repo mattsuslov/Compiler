@@ -10,6 +10,7 @@ enum {
 	Name = 1,
 	Float,
 	Integer,
+	Bool,
 	Oper,
 	Punct,
 	String,

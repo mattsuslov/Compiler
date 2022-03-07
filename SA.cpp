@@ -5,33 +5,46 @@
 #include "Error.h"
 #include "Logger.h"
 
+
 SA::SA() {
     FIRSTConstructor("FIRST.txt", first_);
 }
 
+Semantic& sem = Semantic::inst();
+
 void SA::Definition() {
     EEEType();
     Name();
+    sem.push_type(sem.type);
+
+    sem.put_id(sem.id, sem.type);
 
     if (cur.data == "=") {
         GetToken();
 
         Prior12();
+
+        sem.check_op("=");
     }
 
     while (cur.data == ",") {
         GetToken();
         Name();
 
+        sem.put_id(sem.id, sem.type);
+
         if (cur.data == "=") {
             GetToken();
 
             Prior12();
+
+            sem.check_op("=");
         }
     }
 }
 
 void SA::While() {
+    sem.extend_tid();
     if (cur.data != "while") throw ExpectedSymbol(row, col, "while", cur.data.c_str());
     GetToken();
 
@@ -40,19 +53,29 @@ void SA::While() {
 
     Exp();
 
+    sem.eq_type(Semantic::Type(Semantic::BASE_TYPE::BOOL));
+
     if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
 
-    Operator();
+    NonExtendedOperator();
+    sem.del_tid();
+
 }
 
-void SA::Enumeration() {
+std::vector<Semantic::Type> SA::Enumeration() {
+    std::vector<Semantic::Type> res;
+
     Exp();
+    res.push_back(sem.pop_type());
 
     while (cur.data == ",") {
         GetToken();
         Exp();
+        res.push_back(sem.pop_type());
     }
+
+    return res;
 }
 
 void SA::Struct() {
@@ -81,6 +104,12 @@ void SA::Struct() {
 void SA::Type() {
     if (cur.data == "int" || cur.data == "bool" ||
         cur.data == "char" || cur.data == "double" || cur.data == "void" || cur.data == "float") {
+        if (cur.data == "int") sem.type = Semantic::Type(Semantic::BASE_TYPE::INT);
+        if (cur.data == "bool") sem.type = Semantic::Type(Semantic::BASE_TYPE::BOOL);
+        if (cur.data == "char") sem.type = Semantic::Type(Semantic::BASE_TYPE::CHAR);
+        if (cur.data == "double") sem.type = Semantic::Type(Semantic::BASE_TYPE::DOUBLE);
+        if (cur.data == "void") sem.type = Semantic::Type(Semantic::BASE_TYPE::VOID);
+        if (cur.data == "float") sem.type = Semantic::Type(Semantic::BASE_TYPE::FLOAT);
         GetToken();
     } else if (first_equals("name", cur.data)) {
         Name();
@@ -98,10 +127,10 @@ void SA::Block() {
 
     if (cur.data != "}") throw ExpectedSymbol(row, col, "}", cur.data.c_str());
     GetToken();
-    return;
 }
 
 void SA::For() {
+    sem.extend_tid();
     if (cur.data != "for") throw ExpectedSymbol(row, col, "for", cur.data.c_str());
     GetToken();
     if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
@@ -116,6 +145,7 @@ void SA::For() {
     GetToken();
 
     Exp();
+    sem.eq_type(Semantic::Type(Semantic::BASE_TYPE::BOOL));
     if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
     GetToken();
 
@@ -123,16 +153,19 @@ void SA::For() {
     if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
 
-    Operator();
+    NonExtendedOperator();
+    sem.del_tid();
 }
 
 void SA::If() {
+    sem.extend_tid();
     if (cur.data != "if") throw ExpectedSymbol(row, col, "if", cur.data.c_str());
     GetToken();
     if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
     GetToken();
 
     Exp();
+    sem.eq_type(Semantic::Type(Semantic::BASE_TYPE::BOOL));
 
     if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
@@ -143,6 +176,7 @@ void SA::If() {
     GetToken();
 
     Operator();
+    sem.del_tid();
 }
 
 void SA::Operator() {
@@ -183,7 +217,9 @@ void SA::Operator() {
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
     } else if (first_equals("block", cur.data)) {
+        sem.extend_tid();
         Block();
+        sem.del_tid();
     }  else if (first_equals("for", cur.data)) {
         For();
     } else if (first_equals("while", cur.data)) {
@@ -203,6 +239,7 @@ void SA::Operator() {
 
 void SA::Name() {
     if (cur.type == 1) { // 1 - Name
+        sem.id = cur.data;
         GetToken();
         return;
     } else {
@@ -210,30 +247,50 @@ void SA::Name() {
     }
 }
 
-void SA::Params() {
+
+std::vector <Semantic::Type> SA::Params() {
+    std::vector <Semantic::Type> res;
     EEEType();
     Name();
+
+    sem.put_id(sem.id, sem.type);
+
+    res.push_back(sem.type);
     while (cur.data == ",") {
         GetToken();
-        Params();
+        auto tmp = Params();
+        for (auto el : tmp) {
+            res.push_back(el);
+        }
     }
+    return res;
 }
 
 void SA::Func() {
     EEEType();
     Name();
 
+    std::string fname = sem.id;
+    Semantic::Type ret_type = sem.type;
+    sem.extend_tid();
+
     if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
     GetToken();
 
+
+    Semantic::FSignature tmp;
+    tmp.ret_type = ret_type;
     if (cur.data != ")") {
-        Params();
+        tmp.params = Params();
     }
+    sem.put_ftid({fname, tmp});
 
     if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
 
     Block();
+
+    sem.del_tid();
 }
 
 void SA::Import() {
@@ -332,26 +389,47 @@ void SA::Prior1() {
     } else {
         Name();
 
+        std::string name = sem.id;
+
         if (cur.data == "(") {
+            if (!sem.check_func(name)) throw Error("Undefined function name '" + name + "' ");
             GetToken();
 
+            Semantic::FSignature res;
             if (cur.data != ")") {
-                Enumeration();
+                res.params = Enumeration();
             }
 
             if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
             GetToken();
+
+            if (!sem.check_func(name, res)) throw Error("There isn't any function called '" + name + "' with such parameters");
+            sem.push_type(sem.getSignature(name, res).ret_type);
+
         } else if (cur.data == "[") {
-            GetToken();
+            while (cur.data == "[") {
+                Semantic::Type type = sem.check_id(name);
+                if (type.type.empty()) throw Error("Undefined var '" + sem.id + "' ");
 
-            Exp();
+                GetToken();
 
-            if(cur.data != "]") throw ExpectedSymbol(row, col, "]", cur.data.c_str());
-            GetToken();
+                Exp();
+
+                if(cur.data != "]") throw ExpectedSymbol(row, col, "]", cur.data.c_str());
+                GetToken();
+            }
         } else if (cur.data == ".") {
+            Semantic::Type type = sem.check_id(name);
+            if (type.type.empty()) throw Error("Undefined var '" + sem.id + "' ");
+
             GetToken();
 
             Prior1();
+        } else {
+            Semantic::Type type = sem.check_id(name);
+            if (type.type.empty()) throw Error("Undefined var '" + sem.id + "' ");
+
+            sem.push_type(type);
         }
     }
 }
@@ -360,56 +438,83 @@ void SA::Prior2() {
     if (cur.data == "++" || cur.data == "--"
     || cur.data == "+" || cur.data == "-"
     || cur.data == "*" || cur.data == "&") {
+        std::string op = cur.data;
+        op += "un";
         GetToken();
         Prior2();
+
+        sem.check_op(op);
     } else {
         if (first_equals("prior1", cur.data)) {
             Prior1();
         } else {
-            if (cur.type != Integer && cur.type != Float && cur.type != String) throw ExpectedSymbol(row, col, "Constant", cur.data.c_str());
+            if (cur.type == Integer) {
+                sem.push_type(Semantic::Type(Semantic::BASE_TYPE::INT));
+            } else if (cur.type == Float) {
+                sem.push_type(Semantic::Type(Semantic::BASE_TYPE::FLOAT));
+            } else if (cur.type == String) {
+                sem.push_type(Semantic::Type(Semantic::BASE_TYPE::STRING));
+            } else if (cur.type == Res && (cur.data == "true" || cur.data == "false") ) {
+                sem.push_type(Semantic::Type(Semantic::BASE_TYPE::BOOL));
+            } else {
+                throw ExpectedSymbol(row, col, "Constant", cur.data.c_str());
+            }
             GetToken();
         }
     }
 }
 
+
 void SA::Prior3() {
     Prior2();
 
     if (cur.data == "^") {
+        std::string op = cur.data;
         GetToken();
         Prior3();
+        sem.check_op(op);
     }
 }
 
 void SA::Prior4() {
     Prior3();
     if (cur.data == "*" || cur.data == "/" || cur.data == "%") {
+        std::string op = cur.data;
         GetToken();
         Prior4();
+
+        sem.check_op(op);
     }
 }
 
 void SA::Prior5() {
     Prior4();
     if (cur.data == "+" || cur.data == "-") {
+        std::string op = cur.data;
         GetToken();
         Prior5();
+
+        sem.check_op(op);
     }
 }
 
 void SA::Prior6() {
     Prior5();
     if (cur.data == ">" || cur.data == "<" || cur.data == ">=" || cur.data == "<=") {
+        std::string op = cur.data;
         GetToken();
         Prior6();
+        sem.check_op(op);
     }
 }
 
 void SA::Prior7() {
     Prior6();
     if (cur.data == "==" | cur.data == "!=") {
+        std::string op = cur.data;
         GetToken();
         Prior7();
+        sem.check_op(op);
     }
 }
 
@@ -418,6 +523,7 @@ void SA::Prior8() {
     if (cur.data == "&") {
         GetToken();
         Prior8();
+        sem.check_op("&");
     }
 }
 
@@ -426,6 +532,7 @@ void SA::Prior9() {
     if (cur.data == "|") {
         GetToken();
         Prior9();
+        sem.check_op("|");
     }
 }
 
@@ -434,6 +541,7 @@ void SA::Prior10() {
     if (cur.data == "&&") {
         GetToken();
         Prior10();
+        sem.check_op("&&");
     }
 }
 
@@ -442,6 +550,7 @@ void SA::Prior11() {
     if (cur.data == "||") {
         GetToken();
         Prior11();
+        sem.check_op("||");
     }
 }
 
@@ -450,8 +559,10 @@ void SA::Prior12() {
     if (cur.data == "=" || cur.data == "+=" || cur.data == "-="
     || cur.data == "*=" || cur.data == "/=" ||  cur.data == "%=" || cur.data == "^="
     || cur.data == "&=" || cur.data == "|=") {
+        std::string op = cur.data;
         GetToken();
         Prior12();
+        sem.check_op(op);
     }
 }
 
@@ -471,6 +582,7 @@ void SA::EType() {
 void SA::EEType() {
     EType();
     while (cur.data == "*") {
+        sem.type = Semantic::Type(Semantic::BASE_TYPE::POINTER);
         GetToken();
     }
 }
@@ -518,6 +630,8 @@ void SA::Try() {
     if (cur.data != "catch") return;
 
     while (cur.data == "catch") {
+        sem.extend_tid();
+
         GetToken();
         if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
         GetToken();
@@ -530,6 +644,8 @@ void SA::Try() {
 
         Block();
         if (cur.data != "catch") return;
+
+        sem.del_tid();
     }
 
     for (int i = 0; i < 3; ++i) {
@@ -581,6 +697,7 @@ void SA::analize() {
     Logger::log("Anlizing...");
     auto st_time = std::chrono::high_resolution_clock::now();
     GetToken();
+//    Program();
     try {
         Program();
     } catch (const Error& e) {
@@ -593,6 +710,62 @@ void SA::analize() {
     auto end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float> tim = end_time - st_time;
     Logger::log("Anlizing time: " + std::to_string(tim.count()));
+}
+
+void SA::NonExtendedOperator() {
+    if (first_equals("name", cur.data)) {
+        int mem_ind = ind;
+        Token mem_tok = cur;
+        Name();
+        if (first_equals("name", cur.data) || cur.data == "&" || cur.data == "*" || cur.data == "[") {
+            if (cur.data == "[") {
+                GetToken();
+                if (cur.data == "]") {
+                    ind = mem_ind;
+                    cur = mem_tok;
+                    Definition();
+                } else {
+                    ind = mem_ind;
+                    cur = mem_tok;
+                    Exp();
+                }
+            } else {
+                ind = mem_ind;
+                cur = mem_tok;
+                Definition();
+            }
+        } else {
+            ind = mem_ind;
+            cur = mem_tok;
+            Enumeration();
+        }
+        if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
+        GetToken();
+    } else if (first_equals("exp", cur.data)) {
+        Enumeration();
+        if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
+        GetToken();
+    } else if (first_equals("definition", cur.data)) {
+        Definition();
+        if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
+        GetToken();
+    } else if (first_equals("block", cur.data)) {
+        Block();
+    }  else if (first_equals("for", cur.data)) {
+        For();
+    } else if (first_equals("while", cur.data)) {
+        While();
+    } else if (first_equals("if", cur.data)) {
+        If();
+    } else if (first_equals("try", cur.data)) {
+        Try();
+    } else if (first_equals("_code_", cur.data)) {
+        CodeBlock();
+    } else if (first_equals("return", cur.data)) {
+        Return();
+    } else {
+        throw Error(row, col, "Unknown operator -> " + cur.data);
+    }
 }
 
 
@@ -649,3 +822,97 @@ FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::unordered_m
     }
 
 }
+
+void Semantic::check_op(const std::string &op) {
+    if (op == "+" || op == "*" || op == "/" || op == "-" || op == "^") {
+        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        Type t1 = st.top(); st.pop();
+        Type t2 = st.top(); st.pop();
+        if (t1.type.top() == INT && t2.type.top() == INT) {
+            st.push(Type(INT));
+        } else {
+            throw Error("Operands must be integers");
+        }
+    } else if (op == "+un" || op == "-un" || op == "++un" || op == "--un" || op == "*" || op == "&") {
+        if (st.size() < 1) throw Error(op + " expected at least one operand!!!");
+        Type t1 = st.top(); st.pop();
+        if (t1.type.top() == INT) {
+            st.push(Type(INT));
+        } else {
+            throw Error("Operands must be integers");
+        }
+    } else if (op == "<" || op == ">" || op == "<=" || op == ">=" || op == "==" || op == "!=") {
+        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        Type t1 = st.top(); st.pop();
+        Type t2 = st.top(); st.pop();
+        if (t1.type.top() == BOOL && t2.type.top() == BOOL) {
+            st.push(Type(BOOL));
+        } else if (t1.type.top() == INT && t2.type.top() == INT) {
+            st.push(Type(BOOL));
+        } else {
+            throw Error("Operands must be bool");
+        }
+    } else if (op == "=" || op == "+=" || op == "-="
+               || op == "*=" || op == "/=" ||  op == "%=" || op == "^="
+               || op == "&=" || op == "|=") {
+        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        Type t1 = st.top(); st.pop();
+        Type t2 = st.top(); st.pop();
+        if (t1.type.top() == t2.type.top()) {
+            st.push(t1.type.top());
+        } else {
+            throw Error("You can't put " + std::to_string(t1.type.top()) + " into " + std::to_string(t2.type.top()));
+        }
+    } else if (op == "|" || op == "&") {
+        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        Type t1 = st.top(); st.pop();
+        Type t2 = st.top(); st.pop();
+        if (t1.type.top() == INT && t2.type.top() == INT) {
+            st.push(Type(INT));
+        } else {
+            throw Error("Operands must be int");
+        }
+    } else if (op == "||" || op == "&&") {
+        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        Type t1 = st.top(); st.pop();
+        Type t2 = st.top(); st.pop();
+        if (t1.type.top() == BOOL && t2.type.top() == BOOL) {
+            st.push(Type(BOOL));
+        } else {
+            throw Error("Operands must be bool");
+        }
+    } else {
+        throw Error("Unknown operation");
+    }
+}
+
+void Semantic::put_id(const std::string &id, Semantic::Type type) {
+    if (cur_tid->data.count(id)) throw Error(id + " has been already defined");
+    cur_tid->data[id] = type;
+}
+
+
+
+void Semantic::eq_type(Semantic::Type type) {
+    if (st.empty()) return;
+
+ //   std::cout << type->type << " " << st.top()->type << '\n';
+    if (type.type != st.top().type) {
+        throw Error("Expected bool, but XXXX found");
+    }
+}
+
+void Semantic::put_ftid(const std::pair<std::string, FSignature>& id) {
+    if (ftid.count(id.first) && isContainSignature(ftid[id.first], id.second))
+        throw Error("Ambiguous definition " + id.first);
+
+    ftid[id.first].push_back(id.second);
+}
+
+Semantic::Type Semantic::pop_type() {
+    if (st.empty()) throw Error("I can't get a type - stack is empty");
+    Type res = st.top();
+    st.pop();
+    return res;
+}
+
