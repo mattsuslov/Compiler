@@ -42,6 +42,9 @@ public:
         friend bool operator==(const Type& lhs, const Type& rhs) {
             return lhs.type == rhs.type;
         }
+        friend bool operator!=(const Type& lhs, const Type& rhs) {
+            return !(lhs == rhs);
+        }
     };
 
     struct FSignature {

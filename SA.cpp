@@ -16,8 +16,8 @@ void SA::Definition() {
     EEEType();
     Name();
     sem.push_type(sem.type);
-
-    sem.put_id(sem.id, sem.type);
+    std::string id = sem.id;
+    Semantic::Type t = sem.type;
 
     if (cur.data == "=") {
         GetToken();
@@ -27,11 +27,14 @@ void SA::Definition() {
         sem.check_op("=");
     }
 
+    sem.put_id(id, t);
+
     while (cur.data == ",") {
         GetToken();
         Name();
 
-        sem.put_id(sem.id, sem.type);
+        id = sem.id;
+        t = sem.type;
 
         if (cur.data == "=") {
             GetToken();
@@ -40,6 +43,8 @@ void SA::Definition() {
 
             sem.check_op("=");
         }
+
+        sem.put_id(id, t);
     }
 }
 
@@ -407,17 +412,23 @@ void SA::Prior1() {
             sem.push_type(sem.getSignature(name, res).ret_type);
 
         } else if (cur.data == "[") {
-            while (cur.data == "[") {
-                Semantic::Type type = sem.check_id(name);
-                if (type.type.empty()) throw Error("Undefined var '" + sem.id + "' ");
+            Semantic::Type type = sem.check_id(name);
+            if (type.type.empty()) throw Error("Undefined array '" + sem.id + "' ");
+            if (type.type.top() != Semantic::POINTER) throw Error("Impossible indexing of '" + sem.id + "' ");
 
+            while (cur.data == "[") {
                 GetToken();
 
                 Exp();
+                sem.eq_type(Semantic::INT);
+                sem.pop_type();
 
                 if(cur.data != "]") throw ExpectedSymbol(row, col, "]", cur.data.c_str());
                 GetToken();
             }
+
+            type.type.pop();
+            sem.push_type(type);
         } else if (cur.data == ".") {
             Semantic::Type type = sem.check_id(name);
             if (type.type.empty()) throw Error("Undefined var '" + sem.id + "' ");
@@ -572,17 +583,29 @@ void SA::Exp() {
 
 void SA::EType() {
     Type();
+    Semantic::Type t = sem.type;
+    bool is_array = false;
     while (cur.data == "[") {
+        is_array = true;
         GetToken();
+
+        Exp();
+        sem.eq_type(Semantic::INT);
+        sem.pop_type();
+
         if (cur.data != "]") throw ExpectedSymbol(row, col, "]", cur.data.c_str());
         GetToken();
     }
+    if (is_array) {
+        t.type.push(Semantic::POINTER);
+    }
+    sem.type = t;
 }
 
 void SA::EEType() {
     EType();
     while (cur.data == "*") {
-        sem.type = Semantic::Type(Semantic::BASE_TYPE::POINTER);
+        sem.type.type.push(Semantic::BASE_TYPE::POINTER);
         GetToken();
     }
 }
@@ -824,16 +847,29 @@ FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::unordered_m
 }
 
 void Semantic::check_op(const std::string &op) {
-    if (op == "+" || op == "*" || op == "/" || op == "-" || op == "^") {
+    if (op == "+" || op == "-") {
         if (st.size() < 2) throw Error(op + " is a binary operation!!!");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
         if (t1.type.top() == INT && t2.type.top() == INT) {
-            st.push(Type(INT));
+            st.push(t1);
+        } else if (t1.type.top() == POINTER && t2.type.top() == INT) {
+            st.push(t1);
+        } else if (t1.type.top() == INT && t2.type.top() == POINTER) {
+            st.push(t2);
         } else {
             throw Error("Operands must be integers");
         }
-    } else if (op == "+un" || op == "-un" || op == "++un" || op == "--un" || op == "*" || op == "&") {
+    } else if (op == "*" || op == "/" || op == "^") {
+        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        Type t1 = st.top(); st.pop();
+        Type t2 = st.top(); st.pop();
+        if (t1.type.top() == INT && t2.type.top() == INT) {
+            st.push(t1);
+        } else {
+            throw Error("Operands must be integers");
+        }
+    } else if (op == "+un" || op == "-un" || op == "++un" || op == "--un") {
         if (st.size() < 1) throw Error(op + " expected at least one operand!!!");
         Type t1 = st.top(); st.pop();
         if (t1.type.top() == INT) {
@@ -841,6 +877,20 @@ void Semantic::check_op(const std::string &op) {
         } else {
             throw Error("Operands must be integers");
         }
+    } else if (op == "*un") {
+        if (st.size() < 1) throw Error(op + " expected at least one operand!!!");
+        Type t1 = st.top(); st.pop();
+        if (t1.type.top() == POINTER) {
+            t1.type.pop();
+            st.push(t1);
+        } else {
+            throw Error("Operands must be integers");
+        }
+    } else if (op == "&un") {
+        if (st.size() < 1) throw Error(op + " expected at least one operand!!!");
+        Type t1 = st.top(); st.pop();
+        t1.type.push(Semantic::POINTER);
+        st.push(t1);
     } else if (op == "<" || op == ">" || op == "<=" || op == ">=" || op == "==" || op == "!=") {
         if (st.size() < 2) throw Error(op + " is a binary operation!!!");
         Type t1 = st.top(); st.pop();
@@ -858,8 +908,8 @@ void Semantic::check_op(const std::string &op) {
         if (st.size() < 2) throw Error(op + " is a binary operation!!!");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
-        if (t1.type.top() == t2.type.top()) {
-            st.push(t1.type.top());
+        if (t1 == t2) {
+            st.push(t1);
         } else {
             throw Error("You can't put " + std::to_string(t1.type.top()) + " into " + std::to_string(t2.type.top()));
         }
@@ -896,8 +946,7 @@ void Semantic::put_id(const std::string &id, Semantic::Type type) {
 void Semantic::eq_type(Semantic::Type type) {
     if (st.empty()) return;
 
- //   std::cout << type->type << " " << st.top()->type << '\n';
-    if (type.type != st.top().type) {
+    if (type != st.top()) {
         throw Error("Expected bool, but XXXX found");
     }
 }
