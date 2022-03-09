@@ -841,10 +841,11 @@ FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::unordered_m
         }
     }
 
-    for (auto& p: f) {
-        bool flag = true;
-        while (flag) {
-            flag = false;
+    std::unordered_map<std::string, std::vector<std::string>> nf;
+    bool flag = true;
+    while (flag) {
+        flag = false;
+        for (auto& p: f) {
             auto& vec = p.second;
             auto key = p.first;
             std::vector<std::string> nvec;
@@ -858,9 +859,32 @@ FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::unordered_m
                     nvec.push_back(str);
                 }
             }
-            f[key] = nvec;
+            nf[key] = nvec;
         }
+        f = nf;
     }
+
+
+//    for (auto& p: f) {
+//        bool flag = true;
+//        while (flag) {
+//            flag = false;
+//            auto& vec = p.second;
+//            auto key = p.first;
+//            std::vector<std::string> nvec;
+//            for (const std::string& str: vec) {
+//                if (!f[str].empty()) {
+//                    flag = true;
+//                    for (int i = 0; i < f[str].size(); ++i) {
+//                        nvec.push_back(f[str][i]);
+//                    }
+//                } else {
+//                    nvec.push_back(str);
+//                }
+//            }
+//            f[key] = nvec;
+//        }
+//    }
 
 }
 
