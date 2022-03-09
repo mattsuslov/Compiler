@@ -725,7 +725,7 @@ void SA::analize() {
     Logger::log("Anlizing...");
     auto st_time = std::chrono::high_resolution_clock::now();
     GetToken();
-//    Program();
+   // Program();
     try {
         Program();
     } catch (const Error& e) {

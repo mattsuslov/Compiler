@@ -1,6 +1,5 @@
 #include "LA.h"
 
-
 LA::LA() {
 	load_input();
 //	clear_comments();
@@ -12,7 +11,7 @@ void LA::fact_to_tokens() {
     int pos = 0;
     while (pos < input.size()) {
         auto tok = read_token(pos);
-        if (tok.data.empty() || tok.data[0] == 0 || tok.data == "\t") continue;
+        if (tok.data.empty() || tok.data[0] == 0 || tok.data == "\t" || tok.data == "\r") continue;
         Token::mutex.lock();
         Token::tokens.push_back(tok);
         Token::state = Go;
@@ -135,7 +134,7 @@ DFSMConstructor::DFSMConstructor(const std::string& filename) {
         } else if (syms == "ENDL") {
             f->next['\n'] = t;
         } else {
-            for (u_char ch: syms) {
+            for (unsigned char ch: syms) {
                 f->next[ch] = t;
             }
         }
