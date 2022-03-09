@@ -31,16 +31,16 @@ public:
         Type(BASE_TYPE baseType) {
             type.push(baseType);
         }
-        Type() {
-
-        }
+        Type() = default;
         std::stack<BASE_TYPE> type;
+        std::map<std::string, Type> fields;
+
 
         friend bool operator<(const Type& lhs, const Type& rhs) {
             return lhs.type < rhs.type;
         }
         friend bool operator==(const Type& lhs, const Type& rhs) {
-            return lhs.type == rhs.type;
+            return lhs.type == rhs.type && lhs.fields == rhs.fields;
         }
         friend bool operator!=(const Type& lhs, const Type& rhs) {
             return !(lhs == rhs);
@@ -59,47 +59,32 @@ public:
         }
     };
 
-    bool isContainSignature(const std::vector<FSignature>& funcs, const FSignature& seg) const {
-        for (const auto &elem: funcs) {
-            if (elem.params == seg.params) return true;
-        }
-        return false;
-    }
+    struct TID {
+        std::map<std::string, Type> data;
+        TID* par = nullptr;
+    };
 
-    FSignature getSignature(const std::vector<FSignature>& funcs, const FSignature& seg) const {
-        for (const auto &elem: funcs) {
-            if (elem.params == seg.params) return elem;
-        }
-        return seg;
-    }
+    TID* getCurTid() const;
 
-    FSignature getSignature(const std::string& name, const FSignature& seg) {
-        const auto& funcs = ftid[name];
-        for (const auto &elem: funcs) {
-            if (elem.params == seg.params) return elem;
-        }
-        return seg;
-    }
+    std::map<std::string, Type> custom_type;
 
-    bool check_func(const std::string& name) const {
-        return ftid.count(name);
-    }
+    bool isContainSignature(const std::vector<FSignature>& funcs, const FSignature& seg) const;
 
-    bool check_func(const std::string& name, const FSignature& sign) {
-        return check_func(name) && isContainSignature(ftid[name], sign);
-    }
+    FSignature getSignature(const std::vector<FSignature>& funcs, const FSignature& seg) const;
 
-    void extend_tid() {
-        TID* q = new TID;
-        q->par = cur_tid;
-        cur_tid = q;
-    }
+    FSignature getSignature(const std::string& name, const FSignature& seg);
+
+    bool check_func(const std::string& name) const;
+
+    bool check_func(const std::string& name, const FSignature& sign);
+
+    bool check_struct(const std::string& name);
+
+    void extend_tid();
 
     void put_ftid(const std::pair<std::string, FSignature>& id);
 
-    void push_type(Type type) {
-        st.push(type);
-    }
+    void push_type(Type type);
 
     Type pop_type();
 
@@ -109,41 +94,22 @@ public:
 
     void eq_type(Type type);
 
-    Type check_id(const std::string& id) const {
-        TID* ptr = cur_tid;
-        while (ptr) {
-            if (ptr->data.count(id)) return ptr->data[id];
-            ptr = ptr->par;
-        }
-        return Type();
-    }
+    Type check_id(const std::string& id) const;
 
-    void del_tid() {
-        if (!cur_tid) return;
-        TID* tmp = cur_tid->par;
-        delete cur_tid;
-        cur_tid = tmp;
-    }
+    void del_tid();
 
-    static Semantic& inst() {
-        static Semantic res = Semantic();
-        return res;
-    }
+    static Semantic& inst();
 
     Type type;
     std::string id;
 private:
-    Semantic() {
-
-    }
-    struct TID {
-        std::map<std::string, Type> data;
-        TID* par = nullptr;
-    };
+    Semantic() = default;
 
     std::map<std::string, std::vector<FSignature>> ftid;
 
     TID* cur_tid = new TID;
+
+private:
     std::stack<Type> st;
 };
 
@@ -193,6 +159,7 @@ private:
     void Return();
 
     void Prior1();
+    void Prior12_dot();
     void Prior2();
     void Prior3();
     void Prior4();

@@ -84,10 +84,14 @@ std::vector<Semantic::Type> SA::Enumeration() {
 }
 
 void SA::Struct() {
+    sem.extend_tid();
     if (cur.data != "struct") throw ExpectedSymbol(row, col, "struct", cur.data.c_str());
     GetToken();
 
     Name();
+    std::string struct_name = sem.id;
+    if (sem.check_struct(struct_name)) throw Error(row, col, "Struct '" + struct_name + "' already exist");
+
     if (cur.data != "{") throw ExpectedSymbol(row, col, "{", cur.data.c_str());
     GetToken();
 
@@ -104,6 +108,14 @@ void SA::Struct() {
     GetToken();
     if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
     GetToken();
+
+    Semantic::TID* cur_tid = sem.getCurTid();
+    Semantic::Type t;
+    for (auto el: cur_tid->data) {
+        t.fields[el.first] = el.second;
+    }
+    sem.custom_type[struct_name] = t;
+    sem.del_tid();
 }
 
 void SA::Type() {
@@ -429,13 +441,6 @@ void SA::Prior1() {
 
             type.type.pop();
             sem.push_type(type);
-        } else if (cur.data == ".") {
-            Semantic::Type type = sem.check_id(name);
-            if (type.type.empty()) throw Error("Undefined var '" + sem.id + "' ");
-
-            GetToken();
-
-            Prior1();
         } else {
             Semantic::Type type = sem.check_id(name);
             if (type.type.empty()) throw Error("Undefined var '" + sem.id + "' ");
@@ -457,7 +462,7 @@ void SA::Prior2() {
         sem.check_op(op);
     } else {
         if (first_equals("prior1", cur.data)) {
-            Prior1();
+            Prior12_dot();
         } else {
             if (cur.type == Integer) {
                 sem.push_type(Semantic::Type(Semantic::BASE_TYPE::INT));
@@ -791,6 +796,19 @@ void SA::NonExtendedOperator() {
     }
 }
 
+void SA::Prior12_dot() {
+    Prior1();
+
+    if (cur.data == ".") {
+        Semantic::Type type = sem.check_id(sem.id);
+        if (type.type.empty()) throw Error("Undefined var '" + sem.id + "' ");
+
+        GetToken();
+
+        Prior1();
+    }
+}
+
 
 FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::unordered_map<std::string, std::vector<std::string>> &f) {
     std::ifstream in(filename, std::ios::binary | std::ios::ate);
@@ -963,5 +981,74 @@ Semantic::Type Semantic::pop_type() {
     Type res = st.top();
     st.pop();
     return res;
+}
+
+bool Semantic::isContainSignature(const std::vector<FSignature> &funcs, const Semantic::FSignature &seg) const {
+    for (const auto &elem: funcs) {
+        if (elem.params == seg.params) return true;
+    }
+    return false;
+}
+
+Semantic::FSignature Semantic::getSignature(const std::vector<FSignature> &funcs, const Semantic::FSignature &seg) const {
+    for (const auto &elem: funcs) {
+        if (elem.params == seg.params) return elem;
+    }
+    return seg;
+}
+
+Semantic::FSignature Semantic::getSignature(const std::string &name, const Semantic::FSignature &seg) {
+    const auto& funcs = ftid[name];
+    for (const auto &elem: funcs) {
+        if (elem.params == seg.params) return elem;
+    }
+    return seg;
+}
+
+bool Semantic::check_func(const std::string &name) const {
+    return ftid.count(name);
+}
+
+bool Semantic::check_func(const std::string &name, const Semantic::FSignature &sign) {
+    return check_func(name) && isContainSignature(ftid[name], sign);
+}
+
+void Semantic::extend_tid() {
+    TID* q = new TID;
+    q->par = cur_tid;
+    cur_tid = q;
+}
+
+void Semantic::push_type(Semantic::Type type) {
+    st.push(type);
+}
+
+Semantic::Type Semantic::check_id(const std::string &id) const {
+    TID* ptr = cur_tid;
+    while (ptr) {
+        if (ptr->data.count(id)) return ptr->data[id];
+        ptr = ptr->par;
+    }
+    return Type();
+}
+
+void Semantic::del_tid() {
+    if (!cur_tid) return;
+    TID* tmp = cur_tid->par;
+    delete cur_tid;
+    cur_tid = tmp;
+}
+
+Semantic &Semantic::inst() {
+    static Semantic res = Semantic();
+    return res;
+}
+
+Semantic::TID *Semantic::getCurTid() const {
+    return cur_tid;
+}
+
+bool Semantic::check_struct(const std::string &name) {
+    return custom_type.count(name);
 }
 
