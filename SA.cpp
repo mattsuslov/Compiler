@@ -810,7 +810,7 @@ void SA::Prior12_dot() {
 }
 
 
-FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::unordered_map<std::string, std::vector<std::string>> &f) {
+FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::map<std::string, std::vector<std::string>> &f) {
     std::ifstream in(filename, std::ios::binary | std::ios::ate);
     auto size = in.tellg();
     std::string input(size, '\0');
@@ -841,7 +841,7 @@ FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::unordered_m
         }
     }
 
-    std::unordered_map<std::string, std::vector<std::string>> nf;
+    std::map<std::string, std::vector<std::string>> nf;
     bool flag = true;
     while (flag) {
         flag = false;
@@ -863,29 +863,6 @@ FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::unordered_m
         }
         f = nf;
     }
-
-
-//    for (auto& p: f) {
-//        bool flag = true;
-//        while (flag) {
-//            flag = false;
-//            auto& vec = p.second;
-//            auto key = p.first;
-//            std::vector<std::string> nvec;
-//            for (const std::string& str: vec) {
-//                if (!f[str].empty()) {
-//                    flag = true;
-//                    for (int i = 0; i < f[str].size(); ++i) {
-//                        nvec.push_back(f[str][i]);
-//                    }
-//                } else {
-//                    nvec.push_back(str);
-//                }
-//            }
-//            f[key] = nvec;
-//        }
-//    }
-
 }
 
 void Semantic::check_op(const std::string &op) {

@@ -11,7 +11,7 @@
 
 class FIRSTConstructor {
 public:
-    FIRSTConstructor(const std::string& filename, std::unordered_map<std::string, std::vector<std::string>>& f);
+    FIRSTConstructor(const std::string& filename, std::map<std::string, std::vector<std::string>>& f);
 };
 
 class Semantic {
@@ -127,7 +127,7 @@ private:
 	Token cur;
 	int ind = 0;
 	int row = 1, col = 1;
-    std::unordered_map<std::string, std::vector<std::string>> first_;
+    std::map<std::string, std::vector<std::string>> first_;
     bool first_equals(const std::string& str, const std::string& target);
     void GetToken();
 
