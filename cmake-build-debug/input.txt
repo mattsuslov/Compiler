@@ -1,10 +1,7 @@
-struct Node {
-    int a;
-};
-
 
 int main() {
-    Node c;
-    int[100][100] a;
-    int b = a[10][10];
+   char a;
+   char b;
+   a + b;
+
 }

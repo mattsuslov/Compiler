@@ -6,6 +6,7 @@
 #include "Logger.h"
 
 
+
 SA::SA() {
     FIRSTConstructor("FIRST.txt", first_);
 }
@@ -90,7 +91,7 @@ void SA::Struct() {
 
     Name();
     std::string struct_name = sem.id;
-    if (sem.check_struct(struct_name)) throw Error(row, col, "Struct '" + struct_name + "' already exist");
+    if (sem.check_struct(struct_name)) throw Error(row, col, "Struct '" + struct_name + "' already exists");
 
     if (cur.data != "{") throw ExpectedSymbol(row, col, "{", cur.data.c_str());
     GetToken();
@@ -420,7 +421,7 @@ void SA::Prior1() {
             if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
             GetToken();
 
-            if (!sem.check_func(name, res)) throw Error("There isn't any function called '" + name + "' with such parameters");
+            if (!sem.check_func(name, res)) throw Error("Call to undefined function " + name);
             sem.push_type(sem.getSignature(name, res).ret_type);
 
         } else if (cur.data == "[") {
@@ -602,7 +603,7 @@ void SA::EType() {
         GetToken();
     }
     if (is_array) {
-        t.type.push(Semantic::POINTER);
+        t.Push(Semantic::POINTER);
     }
     sem.type = t;
 }
@@ -610,7 +611,7 @@ void SA::EType() {
 void SA::EEType() {
     EType();
     while (cur.data == "*") {
-        sem.type.type.push(Semantic::BASE_TYPE::POINTER);
+        sem.type.Push(Semantic::BASE_TYPE::POINTER);
         GetToken();
     }
 }
@@ -808,9 +809,7 @@ void SA::Prior12_dot() {
         Prior1();
     }
 }
-
-
-FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::map<std::string, std::vector<std::string>> &f) {
+FIRSTConstructor::FIRSTConstructor(const std::string &filename, std::map<std::string, std::vector<std::string>> &f) {
     std::ifstream in(filename, std::ios::binary | std::ios::ate);
     auto size = in.tellg();
     std::string input(size, '\0');
@@ -841,11 +840,10 @@ FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::map<std::st
         }
     }
 
-    std::map<std::string, std::vector<std::string>> nf;
-    bool flag = true;
-    while (flag) {
-        flag = false;
-        for (auto& p: f) {
+    for (auto& p: f) {
+        bool flag = true;
+        while (flag) {
+            flag = false;
             auto& vec = p.second;
             auto key = p.first;
             std::vector<std::string> nvec;
@@ -859,10 +857,10 @@ FIRSTConstructor::FIRSTConstructor(const std::string& filename, std::map<std::st
                     nvec.push_back(str);
                 }
             }
-            nf[key] = nvec;
+            f[key] = nvec;
         }
-        f = nf;
     }
+
 }
 
 void Semantic::check_op(const std::string &op) {
@@ -906,12 +904,12 @@ void Semantic::check_op(const std::string &op) {
             throw Error("Operands must be integers");
         }
     } else if (op == "&un") {
-        if (st.size() < 1) throw Error(op + " expected at least one operand!!!");
+        if (st.size() < 1) throw Error(op + " expected at least one operand!");
         Type t1 = st.top(); st.pop();
-        t1.type.push(Semantic::POINTER);
+        t1.Push(Semantic::BASE_TYPE::POINTER);
         st.push(t1);
     } else if (op == "<" || op == ">" || op == "<=" || op == ">=" || op == "==" || op == "!=") {
-        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        if (st.size() < 2) throw Error(op + " is a binary operation!");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
         if (t1.type.top() == BOOL && t2.type.top() == BOOL) {
@@ -930,7 +928,7 @@ void Semantic::check_op(const std::string &op) {
         if (t1 == t2) {
             st.push(t1);
         } else {
-            throw Error("You can't put " + std::to_string(t1.type.top()) + " into " + std::to_string(t2.type.top()));
+            throw Error("You can't put " + t1.type_name + " into " + t2.type_name);
         }
     } else if (op == "|" || op == "&") {
         if (st.size() < 2) throw Error(op + " is a binary operation!!!");
@@ -965,8 +963,8 @@ void Semantic::put_id(const std::string &id, Semantic::Type type) {
 void Semantic::eq_type(Semantic::Type type) {
     if (st.empty()) return;
 
-    if (type != st.top()) {
-        throw Error("Expected bool, but XXXX found");
+    if (type.type_name != st.top().type_name) {
+        throw Error("Expected " + type.type_name + ", but " + st.top().type_name + " found");
     }
 }
 
@@ -974,7 +972,7 @@ void Semantic::put_ftid(const std::pair<std::string, FSignature>& id) {
     if (ftid.count(id.first) && isContainSignature(ftid[id.first], id.second))
         throw Error("Ambiguous definition " + id.first);
 
-    ftid[id.first].push_back(id.second);
+     ftid[id.first].push_back(id.second);
 }
 
 Semantic::Type Semantic::pop_type() {

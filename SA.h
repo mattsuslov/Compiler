@@ -9,6 +9,9 @@
 #include <stack>
 #include "Token.h"
 
+static std::vector <std::string> basetype_names {"int", "bool", "void", "string",
+                                                 "double", "char", "float", "point"};
+
 class FIRSTConstructor {
 public:
     FIRSTConstructor(const std::string& filename, std::map<std::string, std::vector<std::string>>& f);
@@ -27,11 +30,22 @@ public:
         POINTER
     };
 
+
     struct Type {
         Type(BASE_TYPE baseType) {
             type.push(baseType);
+            type_name = basetype_names[baseType];
+        }
+        void Push(BASE_TYPE baseType) {
+            type.push(baseType);
+            if (baseType == POINTER) {
+                type_name += "*";
+            } else {
+                type_name += basetype_names[baseType]; // а бывает ли вообще такое?
+            }
         }
         Type() = default;
+        std::string type_name;
         std::stack<BASE_TYPE> type;
         std::map<std::string, Type> fields;
 
