@@ -103,7 +103,8 @@ void SA::Struct() {
         return;
     }
 
-    StructBody();
+    Semantic::Type t(struct_name);
+    StructBody(t);
 
     if (cur.data != "}") throw ExpectedSymbol(row, col, "}", cur.data.c_str());
     GetToken();
@@ -111,7 +112,6 @@ void SA::Struct() {
     GetToken();
 
     Semantic::TID* cur_tid = sem.getCurTid();
-    Semantic::Type t(struct_name);
     for (auto el: cur_tid->data) {
         t.fields[el.first] = el.second;
     }
@@ -131,6 +131,11 @@ void SA::Type() {
         GetToken();
     } else if (first_equals("name", cur.data)) {
         Name();
+
+        if (!sem.check_struct(sem.id)) {
+            throw Error("Undefined type " + sem.id + ". Maybe you need to create a structure?");
+        }
+        sem.type = sem.custom_type[sem.id];
     } else {
         throw Error(row, col, "Declared types have to begin with letter or _ -> " + cur.data);
     }
@@ -439,7 +444,7 @@ void SA::Prior1() {
                 GetToken();
             }
 
-            type.ptr_num++;
+            type.ptr_num--;
             sem.push_type(type);
         } else {
             Semantic::Type type = sem.check_id(name);
@@ -462,7 +467,7 @@ void SA::Prior2() {
         sem.check_op(op);
     } else {
         if (first_equals("prior1", cur.data)) {
-            Prior12_dot();
+            Prior_dot();
         } else {
             if (cur.type == Integer) {
                 sem.push_type(Semantic::Type("int"));
@@ -631,7 +636,7 @@ void SA::Return() {
     GetToken();
 }
 
-void SA::StructBody() {
+void SA::StructBody(Semantic::Type& t) {
     int ind_mem = ind;
     Token tok_mem = cur;
     EEEType();
@@ -639,7 +644,7 @@ void SA::StructBody() {
     ind = ind_mem;
     if (cur.data == "(") {
         cur = tok_mem;
-        Func();
+        Method(t);
     } else  {
         cur = tok_mem;
         Definition();
@@ -647,7 +652,7 @@ void SA::StructBody() {
         GetToken();
     }
     if (cur.data == "}") return;
-    StructBody();
+    StructBody(t);
 }
 
 void SA::Try() {
@@ -796,17 +801,99 @@ void SA::NonExtendedOperator() {
     }
 }
 
-void SA::Prior12_dot() {
+void SA::Prior1_dot() {
+    Name();
+    std::string name = sem.id;
+
+    Semantic::Type prev_type = sem.pop_type();
+
+
+    if (cur.data == "(") {
+        if (!prev_type.check_method(name)) throw Error("Undefined method name '" + name + "' ");
+        GetToken();
+
+        Semantic::FSignature res;
+        if (cur.data != ")") {
+            res.params = Enumeration();
+        }
+
+        if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
+        GetToken();
+
+        if (!prev_type.check_method(name, res)) throw Error("Call to undefined function " + name);
+        sem.push_type(prev_type.getSignature(name, res).ret_type);
+
+    } else if (cur.data == "[") {
+        Semantic::Type type = prev_type.check_field(name);
+        if (type.name == "") throw Error("Undefined array '" + sem.id + "' ");
+        if (type.ptr_num == 0) throw Error("Impossible indexing of '" + sem.id + "' ");
+
+        while (cur.data == "[") {
+            GetToken();
+
+            Exp();
+            sem.eq_type(Semantic::Type("int"));
+            sem.pop_type();
+
+            if(cur.data != "]") throw ExpectedSymbol(row, col, "]", cur.data.c_str());
+            GetToken();
+        }
+
+        type.ptr_num--;
+        sem.push_type(type);
+    } else {
+        Semantic::Type type = prev_type.check_field(name);
+        if (type.name == "") throw Error("Undefined var '" + sem.id + "' ");
+
+        sem.push_type(type);
+    }
+}
+
+void SA::Prior_dot() {
     Prior1();
 
     if (cur.data == ".") {
-        Semantic::Type type = sem.check_id(sem.id);
-        if (type.name == "") throw Error("Undefined var '" + sem.id + "' ");
-
         GetToken();
-        Prior1();
+        Prior_dot_after();
     }
 }
+
+void SA::Prior_dot_after() {
+    Prior1_dot();
+
+    if (cur.data == ".") {
+        GetToken();
+        Prior_dot_after();
+    }
+}
+
+void SA::Method(Semantic::Type& acc) {
+    EEEType();
+    Name();
+
+    std::string fname = sem.id;
+    Semantic::Type ret_type = sem.type;
+    sem.extend_tid();
+
+    if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
+    GetToken();
+
+    Semantic::FSignature tmp;
+    tmp.ret_type = ret_type;
+    if (cur.data != ")") {
+        tmp.params = Params();
+    }
+    acc.put_ftid({fname, tmp});
+
+    if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
+    GetToken();
+
+    Block();
+
+    sem.del_tid();
+}
+
+
 FIRSTConstructor::FIRSTConstructor(const std::string &filename, std::map<std::string, std::vector<std::string>> &f) {
     std::ifstream in(filename, std::ios::binary | std::ios::ate);
     auto size = in.tellg();
@@ -870,7 +957,7 @@ void Semantic::check_op(const std::string &op) {
             st.push(t1);
         } else if (t1.ptr_num > 0 && t2 == Semantic::Type("int")) {
             st.push(t1);
-        } else if (t1 == Semantic::Type("int")  && t2.ptr_num > 0) {
+        } else if (t1 == Semantic::Type("int") && t2.ptr_num > 0) {
             st.push(t2);
         } else {
             throw Error("Operands must be integers");
@@ -970,7 +1057,7 @@ void Semantic::put_ftid(const std::pair<std::string, FSignature>& id) {
     if (ftid.count(id.first) && isContainSignature(ftid[id.first], id.second))
         throw Error("Ambiguous definition " + id.first);
 
-     ftid[id.first].push_back(id.second);
+    ftid[id.first].push_back(id.second);
 }
 
 Semantic::Type Semantic::pop_type() {
@@ -1049,3 +1136,37 @@ bool Semantic::check_struct(const std::string &name) {
     return custom_type.count(name);
 }
 
+Semantic::Type Semantic::Type::check_field(std::string name) {
+    if (!fields.count(name)) throw Error("Unknown field '" + name + "' ");
+    return fields[name];
+}
+
+void Semantic::Type::put_ftid(const std::pair<std::string, FSignature> &id) {
+    if (ftid.count(id.first) && isContainSignature(ftid[id.first], id.second))
+        throw Error("Ambiguous definition " + id.first);
+
+    ftid[id.first].push_back(id.second);
+}
+
+bool Semantic::Type::isContainSignature(const std::vector<FSignature> &funcs, const Semantic::FSignature &seg) const {
+    for (const auto &elem: funcs) {
+        if (elem.params == seg.params) return true;
+    }
+    return false;
+}
+
+bool Semantic::Type::check_method(const std::string &name) const {
+    return ftid.count(name);
+}
+
+bool Semantic::Type::check_method(const std::string &name, const Semantic::FSignature &sign) {
+    return check_method(name) && isContainSignature(ftid[name], sign);
+}
+
+Semantic::FSignature Semantic::Type::getSignature(const std::string &name, const Semantic::FSignature &seg) {
+    const auto& funcs = ftid[name];
+    for (const auto &elem: funcs) {
+        if (elem.params == seg.params) return elem;
+    }
+    return seg;
+}

@@ -9,9 +9,6 @@
 #include <stack>
 #include "Token.h"
 
-static std::vector <std::string> basetype_names {"int", "bool", "void", "string",
-                                                 "double", "char", "float", "point"};
-
 class FIRSTConstructor {
 public:
     FIRSTConstructor(const std::string& filename, std::map<std::string, std::vector<std::string>>& f);
@@ -53,7 +50,17 @@ public:
            return lhs.name == rhs.name && lhs.ptr_num == rhs.ptr_num; // сравнение s_ref?
        }
 
+       bool check_method(const std::string& name) const;
 
+       bool check_method(const std::string& name, const FSignature& sign);
+
+       FSignature getSignature(const std::string& name, const FSignature& seg);
+
+       Semantic::Type check_field(std::string name);
+
+       bool isContainSignature(const std::vector<FSignature>& funcs, const FSignature& seg) const;
+
+       void put_ftid(const std::pair<std::string, FSignature>& id);
    };
 
     struct FSignature {
@@ -143,10 +150,11 @@ private:
     void Program();
 
     void Struct();
-    void StructBody();
+    void StructBody(Semantic::Type& t);
     void Import();
 
     void Func();
+    void Method(Semantic::Type& acc);
     void Type();
     void EType();
     void EEType();
@@ -167,7 +175,10 @@ private:
     void Return();
 
     void Prior1();
-    void Prior12_dot();
+    void Prior1_dot();
+    void Prior_dot();
+    void Prior_dot_after();
+
     void Prior2();
     void Prior3();
     void Prior4();
