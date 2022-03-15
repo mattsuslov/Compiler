@@ -19,52 +19,46 @@ public:
 
 class Semantic {
 public:
-    enum BASE_TYPE {
-        INT,
-        BOOL,
-        VOID,
-        STRING,
-        DOUBLE,
-        CHAR,
-        FLOAT,
-        POINTER
-    };
+    struct Type;
+    struct FSignature;
+
+   struct Type {
+       std::map<std::string, Type> fields;
+       std::map<std::string, std::vector<FSignature>> ftid;
+       std::string name;
+       int ptr_num;
+       bool is_ref;
+
+       Type (std::string name0, int ptr_num0, bool is_ref0) {
+           name = name0;
+           ptr_num = ptr_num0;
+           is_ref = is_ref0;
+       }
+
+       Type (std::string name0) {
+           name = name0;
+           ptr_num = 0;
+           is_ref = false;
+       }
+       Type() = default;
+       std::string GetName () {
+           std::string res = name;
+           for (int i = 0; i < ptr_num; ++i) {
+               res += '*';
+           }
+           return res;
+       }
+
+       friend bool operator==(const Type& lhs, const Type& rhs) {
+           return lhs.name == rhs.name && lhs.ptr_num == rhs.ptr_num; // сравнение s_ref?
+       }
 
 
-    struct Type {
-        Type(BASE_TYPE baseType) {
-            type.push(baseType);
-            type_name = basetype_names[baseType];
-        }
-        void Push(BASE_TYPE baseType) {
-            type.push(baseType);
-            if (baseType == POINTER) {
-                type_name += "*";
-            } else {
-                type_name += basetype_names[baseType]; // а бывает ли вообще такое?
-            }
-        }
-        Type() = default;
-        std::string type_name;
-        std::stack<BASE_TYPE> type;
-        std::map<std::string, Type> fields;
-
-
-        friend bool operator<(const Type& lhs, const Type& rhs) {
-            return lhs.type < rhs.type;
-        }
-        friend bool operator==(const Type& lhs, const Type& rhs) {
-            return lhs.type == rhs.type && lhs.fields == rhs.fields;
-        }
-        friend bool operator!=(const Type& lhs, const Type& rhs) {
-            return !(lhs == rhs);
-        }
-    };
+   };
 
     struct FSignature {
         std::vector<Type> params;
         Type ret_type;
-
         friend bool operator==(const FSignature& a, const FSignature& b) {
             return a.params == b.params && a.ret_type == b.ret_type;
         }

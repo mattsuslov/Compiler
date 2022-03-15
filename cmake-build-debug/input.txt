@@ -1,7 +1,9 @@
+struct node {
+
+};
 
 int main() {
-   char a;
-   char b;
-   a + b;
-
+     int* a;
+     int b;
+     a + b;
 }

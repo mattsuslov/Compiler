@@ -59,7 +59,7 @@ void SA::While() {
 
     Exp();
 
-    sem.eq_type(Semantic::Type(Semantic::BASE_TYPE::BOOL));
+    sem.eq_type(Semantic::Type("bool"));
 
     if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
@@ -111,7 +111,7 @@ void SA::Struct() {
     GetToken();
 
     Semantic::TID* cur_tid = sem.getCurTid();
-    Semantic::Type t;
+    Semantic::Type t(struct_name);
     for (auto el: cur_tid->data) {
         t.fields[el.first] = el.second;
     }
@@ -122,12 +122,12 @@ void SA::Struct() {
 void SA::Type() {
     if (cur.data == "int" || cur.data == "bool" ||
         cur.data == "char" || cur.data == "double" || cur.data == "void" || cur.data == "float") {
-        if (cur.data == "int") sem.type = Semantic::Type(Semantic::BASE_TYPE::INT);
-        if (cur.data == "bool") sem.type = Semantic::Type(Semantic::BASE_TYPE::BOOL);
-        if (cur.data == "char") sem.type = Semantic::Type(Semantic::BASE_TYPE::CHAR);
-        if (cur.data == "double") sem.type = Semantic::Type(Semantic::BASE_TYPE::DOUBLE);
-        if (cur.data == "void") sem.type = Semantic::Type(Semantic::BASE_TYPE::VOID);
-        if (cur.data == "float") sem.type = Semantic::Type(Semantic::BASE_TYPE::FLOAT);
+        if (cur.data == "int") sem.type = Semantic::Type("int");
+        if (cur.data == "bool") sem.type = Semantic::Type("bool");
+        if (cur.data == "char") sem.type = Semantic::Type("char");
+        if (cur.data == "double") sem.type = Semantic::Type("double");
+        if (cur.data == "void") sem.type = Semantic::Type("void");
+        if (cur.data == "float") sem.type = Semantic::Type("float");
         GetToken();
     } else if (first_equals("name", cur.data)) {
         Name();
@@ -163,7 +163,7 @@ void SA::For() {
     GetToken();
 
     Exp();
-    sem.eq_type(Semantic::Type(Semantic::BASE_TYPE::BOOL));
+    sem.eq_type(Semantic::Type("bool"));
     if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
     GetToken();
 
@@ -183,7 +183,7 @@ void SA::If() {
     GetToken();
 
     Exp();
-    sem.eq_type(Semantic::Type(Semantic::BASE_TYPE::BOOL));
+    sem.eq_type(Semantic::Type("bool"));
 
     if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
@@ -294,7 +294,6 @@ void SA::Func() {
 
     if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
     GetToken();
-
 
     Semantic::FSignature tmp;
     tmp.ret_type = ret_type;
@@ -426,25 +425,25 @@ void SA::Prior1() {
 
         } else if (cur.data == "[") {
             Semantic::Type type = sem.check_id(name);
-            if (type.type.empty()) throw Error("Undefined array '" + sem.id + "' ");
-            if (type.type.top() != Semantic::POINTER) throw Error("Impossible indexing of '" + sem.id + "' ");
+            if (type.name == "") throw Error("Undefined array '" + sem.id + "' ");
+            if (type.ptr_num == 0) throw Error("Impossible indexing of '" + sem.id + "' ");
 
             while (cur.data == "[") {
                 GetToken();
 
                 Exp();
-                sem.eq_type(Semantic::INT);
+                sem.eq_type(Semantic::Type("int"));
                 sem.pop_type();
 
                 if(cur.data != "]") throw ExpectedSymbol(row, col, "]", cur.data.c_str());
                 GetToken();
             }
 
-            type.type.pop();
+            type.ptr_num++;
             sem.push_type(type);
         } else {
             Semantic::Type type = sem.check_id(name);
-            if (type.type.empty()) throw Error("Undefined var '" + sem.id + "' ");
+            if (type.name == "") throw Error("Undefined var '" + sem.id + "' ");
 
             sem.push_type(type);
         }
@@ -466,13 +465,13 @@ void SA::Prior2() {
             Prior12_dot();
         } else {
             if (cur.type == Integer) {
-                sem.push_type(Semantic::Type(Semantic::BASE_TYPE::INT));
+                sem.push_type(Semantic::Type("int"));
             } else if (cur.type == Float) {
-                sem.push_type(Semantic::Type(Semantic::BASE_TYPE::FLOAT));
+                sem.push_type(Semantic::Type("float"));
             } else if (cur.type == String) {
-                sem.push_type(Semantic::Type(Semantic::BASE_TYPE::STRING));
+                sem.push_type(Semantic::Type("string"));
             } else if (cur.type == Res && (cur.data == "true" || cur.data == "false") ) {
-                sem.push_type(Semantic::Type(Semantic::BASE_TYPE::BOOL));
+                sem.push_type(Semantic::Type("bool"));
             } else {
                 throw ExpectedSymbol(row, col, "Constant", cur.data.c_str());
             }
@@ -596,14 +595,14 @@ void SA::EType() {
         GetToken();
 
         Exp();
-        sem.eq_type(Semantic::INT);
+        sem.eq_type(Semantic::Type("int"));
         sem.pop_type();
 
         if (cur.data != "]") throw ExpectedSymbol(row, col, "]", cur.data.c_str());
         GetToken();
     }
     if (is_array) {
-        t.Push(Semantic::POINTER);
+        t.ptr_num++;
     }
     sem.type = t;
 }
@@ -611,7 +610,7 @@ void SA::EType() {
 void SA::EEType() {
     EType();
     while (cur.data == "*") {
-        sem.type.Push(Semantic::BASE_TYPE::POINTER);
+        sem.type.ptr_num++;
         GetToken();
     }
 }
@@ -802,10 +801,9 @@ void SA::Prior12_dot() {
 
     if (cur.data == ".") {
         Semantic::Type type = sem.check_id(sem.id);
-        if (type.type.empty()) throw Error("Undefined var '" + sem.id + "' ");
+        if (type.name == "") throw Error("Undefined var '" + sem.id + "' ");
 
         GetToken();
-
         Prior1();
     }
 }
@@ -868,11 +866,11 @@ void Semantic::check_op(const std::string &op) {
         if (st.size() < 2) throw Error(op + " is a binary operation!!!");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
-        if (t1.type.top() == INT && t2.type.top() == INT) {
+        if (t1 == Semantic::Type("int") && t2 == Semantic::Type("int")) {
             st.push(t1);
-        } else if (t1.type.top() == POINTER && t2.type.top() == INT) {
+        } else if (t1.ptr_num > 0 && t2 == Semantic::Type("int")) {
             st.push(t1);
-        } else if (t1.type.top() == INT && t2.type.top() == POINTER) {
+        } else if (t1 == Semantic::Type("int")  && t2.ptr_num > 0) {
             st.push(t2);
         } else {
             throw Error("Operands must be integers");
@@ -881,7 +879,7 @@ void Semantic::check_op(const std::string &op) {
         if (st.size() < 2) throw Error(op + " is a binary operation!!!");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
-        if (t1.type.top() == INT && t2.type.top() == INT) {
+        if (t1 == Semantic::Type("int")  && t2 == Semantic::Type("int")) {
             st.push(t1);
         } else {
             throw Error("Operands must be integers");
@@ -889,16 +887,16 @@ void Semantic::check_op(const std::string &op) {
     } else if (op == "+un" || op == "-un" || op == "++un" || op == "--un") {
         if (st.size() < 1) throw Error(op + " expected at least one operand!!!");
         Type t1 = st.top(); st.pop();
-        if (t1.type.top() == INT) {
-            st.push(Type(INT));
+        if (t1 == Semantic::Type("int") ) {
+            st.push(Semantic::Type("int") );
         } else {
             throw Error("Operands must be integers");
         }
     } else if (op == "*un") {
         if (st.size() < 1) throw Error(op + " expected at least one operand!!!");
         Type t1 = st.top(); st.pop();
-        if (t1.type.top() == POINTER) {
-            t1.type.pop();
+        if (t1.ptr_num > 0) {
+            t1.ptr_num--;
             st.push(t1);
         } else {
             throw Error("Operands must be integers");
@@ -906,16 +904,16 @@ void Semantic::check_op(const std::string &op) {
     } else if (op == "&un") {
         if (st.size() < 1) throw Error(op + " expected at least one operand!");
         Type t1 = st.top(); st.pop();
-        t1.Push(Semantic::BASE_TYPE::POINTER);
+        t1.ptr_num++;
         st.push(t1);
     } else if (op == "<" || op == ">" || op == "<=" || op == ">=" || op == "==" || op == "!=") {
         if (st.size() < 2) throw Error(op + " is a binary operation!");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
-        if (t1.type.top() == BOOL && t2.type.top() == BOOL) {
-            st.push(Type(BOOL));
-        } else if (t1.type.top() == INT && t2.type.top() == INT) {
-            st.push(Type(BOOL));
+        if (t1 == Semantic::Type("bool") && t2 == Semantic::Type("bool")) {
+            st.push(Semantic::Type("bool"));
+        } else if (t1 == Semantic::Type("int") && t2 == Semantic::Type("int")) {
+            st.push(Semantic::Type("bool"));
         } else {
             throw Error("Operands must be bool");
         }
@@ -928,14 +926,14 @@ void Semantic::check_op(const std::string &op) {
         if (t1 == t2) {
             st.push(t1);
         } else {
-            throw Error("You can't put " + t1.type_name + " into " + t2.type_name);
+            throw Error("You can't put " + t1.name + " into " + t2.name);
         }
     } else if (op == "|" || op == "&") {
         if (st.size() < 2) throw Error(op + " is a binary operation!!!");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
-        if (t1.type.top() == INT && t2.type.top() == INT) {
-            st.push(Type(INT));
+        if (t1 == Semantic::Type("int")  && t2 == Semantic::Type("int") ) {
+            st.push(Semantic::Type("int"));
         } else {
             throw Error("Operands must be int");
         }
@@ -943,8 +941,8 @@ void Semantic::check_op(const std::string &op) {
         if (st.size() < 2) throw Error(op + " is a binary operation!!!");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
-        if (t1.type.top() == BOOL && t2.type.top() == BOOL) {
-            st.push(Type(BOOL));
+        if (t1 == Semantic::Type("bool")  && t2 == Semantic::Type("bool") ) {
+            st.push(Semantic::Type("bool"));
         } else {
             throw Error("Operands must be bool");
         }
@@ -963,8 +961,8 @@ void Semantic::put_id(const std::string &id, Semantic::Type type) {
 void Semantic::eq_type(Semantic::Type type) {
     if (st.empty()) return;
 
-    if (type.type_name != st.top().type_name) {
-        throw Error("Expected " + type.type_name + ", but " + st.top().type_name + " found");
+    if (type.GetName() != st.top().GetName()) {
+        throw Error("Expected " + type.GetName() + ", but " + st.top().GetName() + " found");
     }
 }
 
