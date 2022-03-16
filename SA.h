@@ -26,22 +26,20 @@ public:
        int ptr_num;
        bool is_ref;
 
-       Type (std::string name0, int ptr_num0, bool is_ref0) {
+       Type (std::string name0, int ptr_num0=0, bool is_ref0=false) {
            name = name0;
            ptr_num = ptr_num0;
            is_ref = is_ref0;
        }
 
-       Type (std::string name0) {
-           name = name0;
-           ptr_num = 0;
-           is_ref = false;
-       }
        Type() = default;
        std::string GetName () {
            std::string res = name;
            for (int i = 0; i < ptr_num; ++i) {
                res += '*';
+           }
+           if (is_ref) {
+               res += '&';
            }
            return res;
        }

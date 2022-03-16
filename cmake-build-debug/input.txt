@@ -1,25 +1,15 @@
-struct x {
-    int[100] s(int a) {
-
-    }
-};
-
 struct node {
-    char b;
-
-    int fun() {
-        int a;
-    }
-
-    x fun(int a) {
-    }
-
-    x[100][200] a;
+    int a;
+    int b;
+    int c;
+    char* x;
 };
 
-node st;
 
 int main() {
-    st.a[1].s(1);
-
+    int a = 1;
+    char b;
+    node el;
+    el.x = "asdadsa";
+    return 0;
 }

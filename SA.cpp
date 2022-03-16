@@ -388,16 +388,18 @@ void SA::GetToken() {
 
 bool SA::first_equals(const std::string& str, const std::string& target) {
     if (str == "name") return cur.type == 1;
-    if (str == "const") return (cur.type == Integer || cur.type == Float || cur.type == String);
+    if (str == "const") return (cur.type == Integer || cur.type == Float || cur.type == String || cur.type == Char);
     if (str == target) return true;
     for (int i = 0; i < first_[str].size(); ++i) {
         auto& el = first_[str][i];
         if (el == "name" && cur.type == 1) return true;
-        if (el == "const" && (cur.type == Integer || cur.type == Float || cur.type == String)) return true;
+        if (el == "const" && (cur.type == Integer || cur.type == Float || cur.type == String || cur.type == Char)) return true;
         if (el == target) return true;
     }
     return false;
 }
+
+
 
 
 void SA::Prior1() {
@@ -474,7 +476,9 @@ void SA::Prior2() {
             } else if (cur.type == Float) {
                 sem.push_type(Semantic::Type("float"));
             } else if (cur.type == String) {
-                sem.push_type(Semantic::Type("string"));
+                sem.push_type(Semantic::Type("char", 1));
+            } else if (cur.type == Char) {
+                sem.push_type(Semantic::Type("char", 0));
             } else if (cur.type == Res && (cur.data == "true" || cur.data == "false") ) {
                 sem.push_type(Semantic::Type("bool"));
             } else {
@@ -624,6 +628,7 @@ void SA::EEEType() {
     EEType();
     if (cur.data == "&&" || cur.data == "&") {
         GetToken();
+        sem.type.is_ref = true;
     }
 }
 
@@ -1013,7 +1018,7 @@ void Semantic::check_op(const std::string &op) {
         if (t1 == t2) {
             st.push(t1);
         } else {
-            throw Error("You can't put " + t1.name + " into " + t2.name);
+            throw Error("You can't put " + t1.GetName() + " into " + t2.GetName());
         }
     } else if (op == "|" || op == "&") {
         if (st.size() < 2) throw Error(op + " is a binary operation!!!");

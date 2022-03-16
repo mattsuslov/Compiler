@@ -8,6 +8,7 @@
 enum {
 	Res,
 	Name = 1,
+    Char,
 	Float,
 	Integer,
 	Bool,

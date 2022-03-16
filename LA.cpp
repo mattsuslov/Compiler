@@ -70,6 +70,8 @@ std::string LA::get_type_name(int type) const {
             return "Comment";
         case Bool:
             return "Bool";
+        case Char:
+            return "Char";
         default:
             break;
     }
@@ -182,6 +184,7 @@ int DFSMConstructor::getTypeByName(const std::string &name) {
     if (name == "String") return String;
     if (name == "Comment") return Comment;
     if (name == "Bool") return Bool;
+    if (name == "Char") return Char;
     return Other;
 }
 

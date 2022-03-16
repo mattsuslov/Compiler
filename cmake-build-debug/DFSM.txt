@@ -66,6 +66,13 @@
 {SPEC_OFF -> SPEC_ON ALL}
 {SPEC_ON -> STRING "}
 
+{ROOT -> CHAR? '}
+{CHAR? -> CHARW ALL}
+{CHAR? -> SCHAR? \}
+{SCHAR? -> CHARW ALL}
+{CHARW -> CHAR '}
+
+{CHAR - Nothing - Char}
 {COM - Nothing - Comment}
 {STRING - Nothing - String}
 {DEC - Nothing - Oper}
