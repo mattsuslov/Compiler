@@ -202,6 +202,17 @@ void SA::If() {
     sem.del_tid();
 }
 
+void SA::Throw() {
+    GetToken();
+    if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
+    GetToken();
+    Enumeration();
+    if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
+    GetToken();
+    if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
+    GetToken();
+}
+
 void SA::Operator() {
     if (first_equals("name", cur.data)) {
         int mem_ind = ind;
@@ -255,6 +266,8 @@ void SA::Operator() {
         CodeBlock();
     } else if (first_equals("return", cur.data)) {
         Return();
+    } else if (first_equals("throw", cur.data)) {
+        Throw();
     } else {
         throw Error(row, col, "Unknown operator -> " + cur.data);
     }
@@ -675,7 +688,7 @@ void SA::Try() {
         GetToken();
 
         if (cur.data == ".") break;
-        Definition();
+        Params();
 
         if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
         GetToken();

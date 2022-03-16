@@ -171,6 +171,7 @@ private:
     void If();
     void While();
     void Return();
+    void Throw();
 
     void Prior1();
     void Prior1_dot();

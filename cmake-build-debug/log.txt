@@ -1,8 +1,8 @@
-March 16, 2022 17:25:14 message: Test started.
-March 16, 2022 17:25:14 message: Factorization...
-March 16, 2022 17:25:14 message: Anlizing...
-March 16, 2022 17:25:14 message: Factorization time: 0.000175
-March 16, 2022 17:25:14 message: Anlizing time: 0.000669
-March 16, 2022 17:25:14 message: Total time: 0.011141
-March 16, 2022 17:25:14 message: Testing time: 0.011889
-March 16, 2022 17:25:14 message: Average: 0.011141
+March 16, 2022 18:18:39 message: Test started.
+March 16, 2022 18:18:39 message: Factorization...
+March 16, 2022 18:18:39 message: Anlizing...
+March 16, 2022 18:18:39 message: Factorization time: 0.000158
+March 16, 2022 18:18:39 message: Anlizing time: 0.000322
+March 16, 2022 18:18:39 message: Total time: 0.005536
+March 16, 2022 18:18:39 message: Testing time: 0.006671
+March 16, 2022 18:18:39 message: Average: 0.005536

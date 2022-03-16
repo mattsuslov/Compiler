@@ -13,6 +13,8 @@ float
 char
 goto
 try
+catch
+throw
 true
 false
 _code_

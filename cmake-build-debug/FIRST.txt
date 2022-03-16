@@ -1,5 +1,5 @@
 {type -> int bool char double void float name}
-{operator -> for while if block exp definition return try _code_}
+{operator -> for while if block exp definition return try throw _code_}
 {exp -> prior12}
 {prior12 -> prior11}
 {prior11 -> prior10}

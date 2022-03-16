@@ -1,15 +1,14 @@
-struct node {
-    int a;
-    int b;
-    int c;
-    char* x;
-};
+void DoSomething() {
 
+}
 
 int main() {
-    int a = 1;
-    char b;
-    node el;
-    el.x = "asdadsa";
-    return 0;
+   try {
+        int a = 4;
+        char b;
+        char* v;
+        throw (a, b, v);
+   } catch(int a, char b, char* v) {
+        DoSomething();
+   } catch(...) {}
 }
