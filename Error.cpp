@@ -19,6 +19,13 @@ Error::Error(int row, int col, std::string str) {
     std::sprintf(&text[0], format.c_str(), row, col, str.c_str());
 }
 
+Error::Error(int row, std::string str) {
+    std::string format = "Error:%d - %s\n";
+    int size_s = std::snprintf( nullptr, 0, format.c_str(), row, str.c_str()) + 1;
+    text.resize(size_s);
+    std::sprintf(&text[0], format.c_str(), row, str.c_str());
+}
+
 ExpectedSymbol::ExpectedSymbol(int row, int col) : Error() {
     std::string format = "SyntaxError:%d:%d - Unexpected symbol\n";
     int size_s = std::snprintf( nullptr, 0, format.c_str(), row, col) + 1;

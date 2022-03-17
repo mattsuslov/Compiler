@@ -18,6 +18,7 @@ class Semantic {
 public:
     struct Type;
     struct FSignature;
+    int row = 0;
 
    struct Type {
        std::map<std::string, Type> fields;

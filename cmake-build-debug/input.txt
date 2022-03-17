@@ -3,12 +3,7 @@ void DoSomething() {
 }
 
 int main() {
-   try {
-        int a = 4;
-        char b;
-        char* v;
-        throw (a, b, v);
-   } catch(int a, char b, char* v) {
-        DoSomething();
-   } catch(...) {}
+    int a;
+    char b;
+    a+b;
 }

@@ -91,7 +91,7 @@ void SA::Struct() {
 
     Name();
     std::string struct_name = sem.id;
-    if (sem.check_struct(struct_name)) throw Error(row, col, "Struct '" + struct_name + "' already exists");
+    if (sem.check_struct(struct_name)) throw Error(row, "Struct '" + struct_name + "' already exists");
 
     if (cur.data != "{") throw ExpectedSymbol(row, col, "{", cur.data.c_str());
     GetToken();
@@ -133,11 +133,11 @@ void SA::Type() {
         Name();
 
         if (!sem.check_struct(sem.id)) {
-            throw Error("Undefined type " + sem.id + ". Maybe you need to create a structure?");
+            throw Error(row,"Undefined type '" + sem.id + "'");
         }
         sem.type = sem.custom_type[sem.id];
     } else {
-        throw Error(row, col, "Declared types have to begin with letter or _ -> " + cur.data);
+        throw Error(row, "Declared types have to begin with letter or _ -> " + cur.data);
     }
 }
 
@@ -269,7 +269,7 @@ void SA::Operator() {
     } else if (first_equals("throw", cur.data)) {
         Throw();
     } else {
-        throw Error(row, col, "Unknown operator -> " + cur.data);
+        throw Error(row, "Unknown operator -> " + cur.data);
     }
 }
 
@@ -279,7 +279,7 @@ void SA::Name() {
         GetToken();
         return;
     } else {
-        throw Error(row, col, "It is not name -> " + cur.data);
+        throw Error(row,"Expected name, found '" + cur.data + "'. Name can begin with letter or _" );
     }
 }
 
@@ -384,6 +384,7 @@ void SA::GetToken() {
     if (cur.data == "\n") {
         col = 1;
         row++;
+        sem.row = row;
         GetToken();
     }
     if (cur.type == Comment) {
@@ -391,6 +392,7 @@ void SA::GetToken() {
             if (ch == '\n') {
                 col = 1;
                 row++;
+                sem.row = row;
             } else {
                 col++;
             }
@@ -429,7 +431,7 @@ void SA::Prior1() {
         std::string name = sem.id;
 
         if (cur.data == "(") {
-            if (!sem.check_func(name)) throw Error("Undefined function name '" + name + "' ");
+            if (!sem.check_func(name)) throw Error(row, "Undefined function name '" + name + "' ");
             GetToken();
 
             Semantic::FSignature res;
@@ -440,13 +442,13 @@ void SA::Prior1() {
             if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
             GetToken();
 
-            if (!sem.check_func(name, res)) throw Error("Call to undefined function " + name);
+            if (!sem.check_func(name, res)) throw Error(row, "Call to undefined function '" + name + "' ");
             sem.push_type(sem.getSignature(name, res).ret_type);
 
         } else if (cur.data == "[") {
             Semantic::Type type = sem.check_id(name);
-            if (type.name == "") throw Error("Undefined array '" + sem.id + "' ");
-            if (type.ptr_num == 0) throw Error("Impossible indexing of '" + sem.id + "' ");
+            if (type.name == "") throw Error(row,"Undefined array '" + sem.id + "' ");
+            if (type.ptr_num == 0) throw Error(row,"Impossible indexing of '" + sem.id + "' ");
 
             while (cur.data == "[") {
                 GetToken();
@@ -463,7 +465,7 @@ void SA::Prior1() {
             sem.push_type(type);
         } else {
             Semantic::Type type = sem.check_id(name);
-            if (type.name == "") throw Error("Undefined var '" + sem.id + "' ");
+            if (type.name == "") throw Error(row,"Undefined var '" + sem.id + "' ");
 
             sem.push_type(type);
         }
@@ -815,7 +817,7 @@ void SA::NonExtendedOperator() {
     } else if (first_equals("return", cur.data)) {
         Return();
     } else {
-        throw Error(row, col, "Unknown operator -> " + cur.data);
+        throw Error(row, "Unknown operator -> " + cur.data);
     }
 }
 
@@ -827,7 +829,7 @@ void SA::Prior1_dot() {
 
 
     if (cur.data == "(") {
-        if (!prev_type.check_method(name)) throw Error("Undefined method name '" + name + "' ");
+        if (!prev_type.check_method(name)) throw Error(row,"Undefined method name '" + name + "' ");
         GetToken();
 
         Semantic::FSignature res;
@@ -838,13 +840,13 @@ void SA::Prior1_dot() {
         if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
         GetToken();
 
-        if (!prev_type.check_method(name, res)) throw Error("Call to undefined function " + name);
+        if (!prev_type.check_method(name, res)) throw Error(row,"Call to undefined function '" + name +"' ");
         sem.push_type(prev_type.getSignature(name, res).ret_type);
 
     } else if (cur.data == "[") {
         Semantic::Type type = prev_type.check_field(name);
-        if (type.name == "") throw Error("Undefined array '" + sem.id + "' ");
-        if (type.ptr_num == 0) throw Error("Impossible indexing of '" + sem.id + "' ");
+        if (type.name == "") throw Error(row,"Undefined array '" + sem.id + "' ");
+        if (type.ptr_num == 0) throw Error(row,"Impossible indexing of '" + sem.id + "' ");
 
         while (cur.data == "[") {
             GetToken();
@@ -861,7 +863,7 @@ void SA::Prior1_dot() {
         sem.push_type(type);
     } else {
         Semantic::Type type = prev_type.check_field(name);
-        if (type.name == "") throw Error("Undefined var '" + sem.id + "' ");
+        if (type.name == "") throw Error(row,"Undefined var '" + sem.id + "' ");
 
         sem.push_type(type);
     }
@@ -968,7 +970,7 @@ FIRSTConstructor::FIRSTConstructor(const std::string &filename, std::map<std::st
 
 void Semantic::check_op(const std::string &op) {
     if (op == "+" || op == "-") {
-        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        if (st.size() < 2) throw Error(row,"'" + op + "' is a binary operation");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
         if (t1 == Semantic::Type("int") && t2 == Semantic::Type("int")) {
@@ -978,41 +980,41 @@ void Semantic::check_op(const std::string &op) {
         } else if (t1 == Semantic::Type("int") && t2.ptr_num > 0) {
             st.push(t2);
         } else {
-            throw Error("Operands must be integers");
+            throw Error(row,"Operands must be integers");
         }
     } else if (op == "*" || op == "/" || op == "^") {
-        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        if (st.size() < 2) throw Error(row,"'" + op + "' is a binary operation");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
         if (t1 == Semantic::Type("int")  && t2 == Semantic::Type("int")) {
             st.push(t1);
         } else {
-            throw Error("Operands must be integers");
+            throw Error(row, "Operands must be integers");
         }
     } else if (op == "+un" || op == "-un" || op == "++un" || op == "--un") {
-        if (st.size() < 1) throw Error(op + " expected at least one operand!!!");
+        if (st.size() < 1) throw Error(row, "'" + op + "' expected at least one operand");
         Type t1 = st.top(); st.pop();
         if (t1 == Semantic::Type("int") ) {
             st.push(Semantic::Type("int") );
         } else {
-            throw Error("Operands must be integers");
+            throw Error(row,"Operands must be integers");
         }
     } else if (op == "*un") {
-        if (st.size() < 1) throw Error(op + " expected at least one operand!!!");
+        if (st.size() < 1) throw Error(row,"'" + op + "' expected at least one operand");
         Type t1 = st.top(); st.pop();
         if (t1.ptr_num > 0) {
             t1.ptr_num--;
             st.push(t1);
         } else {
-            throw Error("Operands must be integers");
+            throw Error(row,"Operands must be integers");
         }
     } else if (op == "&un") {
-        if (st.size() < 1) throw Error(op + " expected at least one operand!");
+        if (st.size() < 1) throw Error(row, "'" + op + "' expected at least one operand!");
         Type t1 = st.top(); st.pop();
         t1.ptr_num++;
         st.push(t1);
     } else if (op == "<" || op == ">" || op == "<=" || op == ">=" || op == "==" || op == "!=") {
-        if (st.size() < 2) throw Error(op + " is a binary operation!");
+        if (st.size() < 2) throw Error(row,"'" + op + "' is a binary operation!");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
         if (t1 == Semantic::Type("bool") && t2 == Semantic::Type("bool")) {
@@ -1020,44 +1022,44 @@ void Semantic::check_op(const std::string &op) {
         } else if (t1 == Semantic::Type("int") && t2 == Semantic::Type("int")) {
             st.push(Semantic::Type("bool"));
         } else {
-            throw Error("Operands must be bool");
+            throw Error(row,"Operands must be bool");
         }
     } else if (op == "=" || op == "+=" || op == "-="
                || op == "*=" || op == "/=" ||  op == "%=" || op == "^="
                || op == "&=" || op == "|=") {
-        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        if (st.size() < 2) throw Error(row, "'" +op + "' is a binary operation");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
         if (t1 == t2) {
             st.push(t1);
         } else {
-            throw Error("You can't put " + t1.GetName() + " into " + t2.GetName());
+            throw Error(row,"You can't put " + t1.GetName() + " into " + t2.GetName());
         }
     } else if (op == "|" || op == "&") {
-        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        if (st.size() < 2) throw Error(row,op + " is a binary operation");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
         if (t1 == Semantic::Type("int")  && t2 == Semantic::Type("int") ) {
             st.push(Semantic::Type("int"));
         } else {
-            throw Error("Operands must be int");
+            throw Error(row,"Operands must be integers");
         }
     } else if (op == "||" || op == "&&") {
-        if (st.size() < 2) throw Error(op + " is a binary operation!!!");
+        if (st.size() < 2) throw Error(row, "'" +op + "' is a binary operation");
         Type t1 = st.top(); st.pop();
         Type t2 = st.top(); st.pop();
         if (t1 == Semantic::Type("bool")  && t2 == Semantic::Type("bool") ) {
             st.push(Semantic::Type("bool"));
         } else {
-            throw Error("Operands must be bool");
+            throw Error(row,"Operands must be bool");
         }
     } else {
-        throw Error("Unknown operation");
+        throw Error(row,"Unknown operation '" + op + "'");
     }
 }
 
 void Semantic::put_id(const std::string &id, Semantic::Type type) {
-    if (cur_tid->data.count(id)) throw Error(id + " has been already defined");
+    if (cur_tid->data.count(id)) throw Error(row,id + " has been already defined");
     cur_tid->data[id] = type;
 }
 
@@ -1067,13 +1069,13 @@ void Semantic::eq_type(Semantic::Type type) {
     if (st.empty()) return;
 
     if (type.GetName() != st.top().GetName()) {
-        throw Error("Expected " + type.GetName() + ", but " + st.top().GetName() + " found");
+        throw Error(row,"Expected " + type.GetName() + ",found " + st.top().GetName());
     }
 }
 
 void Semantic::put_ftid(const std::pair<std::string, FSignature>& id) {
     if (ftid.count(id.first) && isContainSignature(ftid[id.first], id.second))
-        throw Error("Ambiguous definition " + id.first);
+        throw Error(row,"Ambiguous definition of '" + id.first + "'");
 
     ftid[id.first].push_back(id.second);
 }
@@ -1155,13 +1157,13 @@ bool Semantic::check_struct(const std::string &name) {
 }
 
 Semantic::Type Semantic::Type::check_field(std::string name) {
-    if (!fields.count(name)) throw Error("Unknown field '" + name + "' ");
+    if (!fields.count(name)) throw Error(sem.row, "Unknown field '" + name + "' ");
     return fields[name];
 }
 
 void Semantic::Type::put_ftid(const std::pair<std::string, FSignature> &id) {
     if (ftid.count(id.first) && isContainSignature(ftid[id.first], id.second))
-        throw Error("Ambiguous definition " + id.first);
+        throw Error(sem.row, "Ambiguous definition of '" + id.first + "'");
 
     ftid[id.first].push_back(id.second);
 }

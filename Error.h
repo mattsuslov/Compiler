@@ -13,6 +13,7 @@ public:
     Error();
     Error(std::string str);
     Error(int row, int col, std::string str);
+    Error(int row, std::string str);
 
 protected:
     std::string text;
