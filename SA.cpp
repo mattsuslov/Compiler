@@ -12,6 +12,7 @@ SA::SA() {
 }
 
 Semantic& sem = Semantic::inst();
+Generation& gen = Generation::inst();
 
 void SA::Definition() {
     EEEType();
@@ -242,14 +243,17 @@ void SA::Operator() {
         }
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
+        gen.p_expression.finish_poliz();
     } else if (first_equals("exp", cur.data)) {
         Enumeration();
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
+        gen.p_expression.finish_poliz();
     } else if (first_equals("definition", cur.data)) {
         Definition();
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
+        gen.p_expression.finish_poliz();
     } else if (first_equals("block", cur.data)) {
         sem.extend_tid();
         Block();
@@ -419,11 +423,13 @@ bool SA::first_equals(const std::string& str, const std::string& target) {
 
 void SA::Prior1() {
     if (cur.data == "(") {
+        gen.push_exp("(");
         GetToken();
 
         Prior12();
 
         if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
+        gen.push_exp(")");
         GetToken();
     } else {
         Name();
@@ -488,14 +494,19 @@ void SA::Prior2() {
         } else {
             if (cur.type == Integer) {
                 sem.push_type(Semantic::Type("int"));
+                gen.push_exp(cur.data);
             } else if (cur.type == Float) {
                 sem.push_type(Semantic::Type("float"));
+                gen.push_exp(cur.data);
             } else if (cur.type == String) {
                 sem.push_type(Semantic::Type("char", 1));
+                gen.push_exp(cur.data);
             } else if (cur.type == Char) {
                 sem.push_type(Semantic::Type("char", 0));
+                gen.push_exp(cur.data);
             } else if (cur.type == Res && (cur.data == "true" || cur.data == "false") ) {
                 sem.push_type(Semantic::Type("bool"));
+                gen.push_exp(cur.data);
             } else {
                 throw ExpectedSymbol(row, col, "Constant", cur.data.c_str());
             }
@@ -524,6 +535,7 @@ void SA::Prior4() {
         Prior4();
 
         sem.check_op(op);
+        gen.push_exp(op);
     }
 }
 
@@ -533,8 +545,8 @@ void SA::Prior5() {
         std::string op = cur.data;
         GetToken();
         Prior5();
-
         sem.check_op(op);
+        gen.push_exp(op);
     }
 }
 

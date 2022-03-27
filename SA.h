@@ -14,6 +14,156 @@ public:
     FIRSTConstructor(const std::string& filename, std::map<std::string, std::vector<std::string>>& f);
 };
 
+class Poliz {
+public:
+    void push_operand(const std::string& str) {
+        kim.push({str});
+    }
+
+    void push_operation(const std::string& str, int prior, int cnt, bool is_right_ass) {
+        if (str == ")") {
+            while (cock.top().lex != "(") {
+                Token x = cock.top();
+                cock.pop();
+                kim.push(x);
+            }
+            cock.pop();
+        } else if (is_right_ass) {
+            while (!cock.empty() && prior < cock.top().prior) {
+                Token x = cock.top();
+                cock.pop();
+                kim.push(x);
+            }
+            cock.push({str, true, is_right_ass, cnt, prior});
+        } else {
+            while (!cock.empty() && prior <= cock.top().prior) {
+                Token x = cock.top();
+                cock.pop();
+                kim.push(x);
+            }
+            cock.push({str, true, is_right_ass, cnt, prior});
+        }
+    }
+
+    void finish_poliz() {
+        while (!cock.empty()) {
+            kim.push(cock.top());
+            cock.pop();
+        }
+        std::stack<Token> tmp;
+        while (!kim.empty()) {
+            tmp.push(kim.top());
+            kim.pop();
+        }
+        kim = tmp;
+        print_self();
+        std::cout << calc() << std::endl;
+    }
+
+
+    int calc() {
+        std::stack<Token> res;
+        while (!kim.empty()) {
+            Token x = kim.top();
+            kim.pop();
+
+            if (!x.is_operation) {
+                res.push(x);
+            } else {
+                std::vector<Token> operands;
+                while (x.cnt--) {
+                    operands.push_back(res.top());
+                    res.pop();
+                }
+
+                if (x.lex == "+") {
+                    int ans = 0;
+                    for (Token el: operands) {
+                        ans += std::stoi(el.lex);
+                    }
+                    res.push({std::to_string(ans)});
+                } else if (x.lex == "-") {
+                    int ans = std::stoi(operands[1].lex) - std::stoi(operands[0].lex);
+                    res.push({std::to_string(ans)});
+                } else if (x.lex == "*") {
+                    int ans = std::stoi(operands[1].lex) * std::stoi(operands[0].lex);
+                    res.push({std::to_string(ans)});
+                } else if (x.lex == "/") {
+                    int ans = std::stoi(operands[1].lex) / std::stoi(operands[0].lex);
+                    res.push({std::to_string(ans)});
+                } else if (x.lex == "%") {
+                    int ans = std::stoi(operands[1].lex) % std::stoi(operands[0].lex);
+                    res.push({std::to_string(ans)});
+                } else {
+                    std::cout << "Unknown operation" << std::endl;
+                }
+            }
+
+
+        }
+        return std::stoi(res.top().lex);
+    }
+
+    void print_self() {
+        std::stack<Token> tmp = kim;
+        while (!tmp.empty()) {
+            std::cout << tmp.top().lex << " ";
+            tmp.pop();
+        }
+        std::cout << std::endl;
+    }
+
+private:
+    struct Token {
+        std::string lex;
+        bool is_operation = false;
+        bool is_right_ass = false;
+        int cnt = 0;
+        int prior = 0;
+    };
+
+    std::stack<Token> kim, cock;
+
+
+};
+
+class Generation {
+public:
+    Poliz p_expression, p_operator;
+
+    void push_exp(const std::string& str) {
+        if (str == "+") {
+            p_expression.push_operation("+", 5, 2, 0);
+        } else if (str == "-") {
+            p_expression.push_operation("-", 5, 2, 0);
+        } else if (str == ";") {
+            p_expression.finish_poliz();
+        } else if (str == "(") {
+            p_expression.push_operation("(", 1, 0, 0);
+        } else if (str == ")") {
+            p_expression.push_operation(")", 1, 0, 0);
+        } else if (str == "*") {
+            p_expression.push_operation("*", 4, 2, 0);
+        } else if (str == "/") {
+            p_expression.push_operation("/", 4, 2, 0);
+        } else if (str == "%") {
+            p_expression.push_operation("%", 4, 2, 0);
+        } else {
+            p_expression.push_operand(str);
+        }
+        p_expression.print_self();
+    }
+
+    static Generation& inst() {
+        static Generation res = Generation();
+        return res;
+    }
+
+private:
+    Generation() = default;
+
+};
+
 class Semantic {
 public:
     struct Type;

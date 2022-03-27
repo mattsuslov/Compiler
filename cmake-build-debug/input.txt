@@ -1,9 +1,3 @@
-void DoSomething() {
-
-}
-
 int main() {
-    int a;
-    char b;
-    a+b;
+    int a = (1+1) % 5;
 }
