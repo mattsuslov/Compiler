@@ -61,6 +61,7 @@ void SA::While() {
     int p1 = gen.poliz.get_current_address();
     Exp();
     sem.eq_type(Semantic::Type("bool"));
+    gen.poliz.finish_poliz();
     int p2 = gen.poliz.get_current_address();
     gen.push_exp("nope");
     gen.push_op("jf");
@@ -495,6 +496,7 @@ void SA::Prior1() {
             if (type.name == "") throw Error(row,"Undefined var '" + sem.id + "' ");
 
             sem.push_type(type);
+            gen.push_exp(name);
         }
     }
 }
@@ -578,6 +580,7 @@ void SA::Prior6() {
         GetToken();
         Prior6();
         sem.check_op(op);
+        gen.push_exp(op);
     }
 }
 
@@ -636,6 +639,7 @@ void SA::Prior12() {
         GetToken();
         Prior12();
         sem.check_op(op);
+        gen.push_exp(op);
     }
 }
 
@@ -1225,7 +1229,6 @@ Semantic::FSignature Semantic::Type::getSignature(const std::string &name, const
 }
 
 int Poliz::calc() {
-    std::map<std::string, std::pair<Semantic::Type, std::string>> value;
     std::stack<Token> res;
     for (int i = 0; i < kim.size(); ++i) {
         Token x = kim[i];
@@ -1241,31 +1244,38 @@ int Poliz::calc() {
             if (x.lex == "+") {
                 int ans = 0;
                 for (Token el: operands) {
-                    ans += std::stoi(el.lex);
+                    ans += std::stoi(devalue(el.lex));
                 }
                 res.push({std::to_string(ans)});
             } else if (x.lex == "-") {
-                int ans = std::stoi(operands[1].lex) - std::stoi(operands[0].lex);
+                int ans = std::stoi(devalue(operands[1].lex)) - std::stoi(devalue(operands[0].lex));
                 res.push({std::to_string(ans)});
             } else if (x.lex == "*") {
-                int ans = std::stoi(operands[1].lex) * std::stoi(operands[0].lex);
+                int ans = std::stoi(devalue(operands[1].lex)) * std::stoi(devalue(operands[0].lex));
                 res.push({std::to_string(ans)});
             } else if (x.lex == "/") {
-                int ans = std::stoi(operands[1].lex) / std::stoi(operands[0].lex);
+                int ans = std::stoi(devalue(operands[1].lex)) / std::stoi(devalue(operands[0].lex));
                 res.push({std::to_string(ans)});
             } else if (x.lex == "%") {
-                int ans = std::stoi(operands[1].lex) % std::stoi(operands[0].lex);
+                int ans = std::stoi(devalue(operands[1].lex)) % std::stoi(devalue(operands[0].lex));
                 res.push({std::to_string(ans)});
             } else if (x.lex == "jmp") {
-                int addr = std::stoi(operands[0].lex);
+                int addr = std::stoi(devalue(operands[0].lex));
                 i = addr - 1;
             } else if (x.lex == "jf") {
-                int addr = std::stoi(operands[0].lex);
+                int addr = std::stoi(devalue(operands[0].lex));
                 if (operands[1].lex == "false") {
                     i = addr - 1;
                 }
             } else if (x.lex == "=") {
-                value[operands[1].lex] = {sem.check_id(operands[1].lex), operands[0].lex};
+                value[operands[1].lex] = {sem.check_id(devalue(operands[1].lex)), devalue(operands[0].lex)};
+                res.push({devalue(operands[1].lex)});
+            } else if (x.lex == "<") {
+                if (std::stoi(devalue(operands[1].lex)) < std::stoi(devalue(operands[0].lex))) {
+                    res.push({"true"});
+                } else {
+                    res.push({"false"});
+                }
             } else {
                 std::cout << "Unknown operation" << std::endl;
             }

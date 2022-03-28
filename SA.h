@@ -173,8 +173,6 @@ public:
 //        std::cout << calc() << std::endl;
     }
 
-
-
     int calc();
 
     int get_current_address() {
@@ -188,6 +186,13 @@ public:
         std::cout << std::endl;
     }
 
+    std::string devalue(std::string str) {
+        if (value.count(str)) {
+            return value[str].second;
+        }
+        return str;
+    }
+
 private:
     struct Token {
         std::string lex;
@@ -199,6 +204,7 @@ private:
 
     std::stack<Token> cock;
     std::vector<Token> kim;
+    std::map<std::string, std::pair<Semantic::Type, std::string>> value;
 };
 
 class Generation {
@@ -222,6 +228,10 @@ public:
             poliz.push_operation("/", 4, 2, 0);
         } else if (str == "%") {
             poliz.push_operation("%", 4, 2, 0);
+        } else if (str == "=") {
+            poliz.push_operation("=", 12, 2, 1);
+        } else if (str == "<") {
+            poliz.push_operation("<", 6, 2, 0);
         } else {
             poliz.push_operand(str);
         }
