@@ -29,6 +29,8 @@ void test() {
     std::chrono::duration<float> tim = end_time - st_time;
     Logger::log("Total time: " + std::to_string(tim.count()));
     sum += tim.count();
+
+    std::cout << Generation::inst().poliz.calc() << std::endl;
 }
 
 int main() {

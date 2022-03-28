@@ -58,16 +58,23 @@ void SA::While() {
     if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
     GetToken();
 
+    int p1 = gen.poliz.get_current_address();
     Exp();
-
     sem.eq_type(Semantic::Type("bool"));
+    int p2 = gen.poliz.get_current_address();
+    gen.push_exp("nope");
+    gen.push_op("jf");
 
     if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
 
+
     NonExtendedOperator();
     sem.del_tid();
 
+    gen.push_exp(std::to_string(p1));
+    gen.push_op("jmp");
+    gen.poliz.put_operand(p2, std::to_string(gen.poliz.get_current_address()));
 }
 
 std::vector<Semantic::Type> SA::Enumeration() {
@@ -190,17 +197,31 @@ void SA::If() {
 
     Exp();
     sem.eq_type(Semantic::Type("bool"));
+    int p1 = gen.poliz.get_current_address();
+    gen.push_exp("nope");
+    gen.push_op("jf");
 
     if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
 
     Operator();
+    int p2 = gen.poliz.get_current_address();
+    gen.push_exp("nope");
+    gen.push_op("jmp");
 
-    if (cur.data != "else") return;
+    if (cur.data != "else") {
+        sem.del_tid();
+        gen.poliz.put_operand(p1, std::to_string(gen.poliz.get_current_address()));
+        gen.poliz.put_operand(p2, std::to_string(gen.poliz.get_current_address()));
+        return;
+    }
     GetToken();
 
+    gen.poliz.put_operand(p1, std::to_string(gen.poliz.get_current_address()));
     Operator();
     sem.del_tid();
+    gen.poliz.put_operand(p2, std::to_string(gen.poliz.get_current_address()));
+    gen.poliz.finish_poliz();
 }
 
 void SA::Throw() {
@@ -243,17 +264,17 @@ void SA::Operator() {
         }
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
-        gen.p_expression.finish_poliz();
+        gen.poliz.finish_poliz();
     } else if (first_equals("exp", cur.data)) {
         Enumeration();
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
-        gen.p_expression.finish_poliz();
+        gen.poliz.finish_poliz();
     } else if (first_equals("definition", cur.data)) {
         Definition();
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
-        gen.p_expression.finish_poliz();
+        gen.poliz.finish_poliz();
     } else if (first_equals("block", cur.data)) {
         sem.extend_tid();
         Block();
@@ -1201,4 +1222,54 @@ Semantic::FSignature Semantic::Type::getSignature(const std::string &name, const
         if (elem.params == seg.params) return elem;
     }
     return seg;
+}
+
+int Poliz::calc() {
+    std::map<std::string, std::pair<Semantic::Type, std::string>> value;
+    std::stack<Token> res;
+    for (int i = 0; i < kim.size(); ++i) {
+        Token x = kim[i];
+        if (!x.is_operation) {
+            res.push(x);
+        } else {
+            std::vector<Token> operands;
+            while (x.cnt--) {
+                operands.push_back(res.top());
+                res.pop();
+            }
+
+            if (x.lex == "+") {
+                int ans = 0;
+                for (Token el: operands) {
+                    ans += std::stoi(el.lex);
+                }
+                res.push({std::to_string(ans)});
+            } else if (x.lex == "-") {
+                int ans = std::stoi(operands[1].lex) - std::stoi(operands[0].lex);
+                res.push({std::to_string(ans)});
+            } else if (x.lex == "*") {
+                int ans = std::stoi(operands[1].lex) * std::stoi(operands[0].lex);
+                res.push({std::to_string(ans)});
+            } else if (x.lex == "/") {
+                int ans = std::stoi(operands[1].lex) / std::stoi(operands[0].lex);
+                res.push({std::to_string(ans)});
+            } else if (x.lex == "%") {
+                int ans = std::stoi(operands[1].lex) % std::stoi(operands[0].lex);
+                res.push({std::to_string(ans)});
+            } else if (x.lex == "jmp") {
+                int addr = std::stoi(operands[0].lex);
+                i = addr - 1;
+            } else if (x.lex == "jf") {
+                int addr = std::stoi(operands[0].lex);
+                if (operands[1].lex == "false") {
+                    i = addr - 1;
+                }
+            } else if (x.lex == "=") {
+                value[operands[1].lex] = {sem.check_id(operands[1].lex), operands[0].lex};
+            } else {
+                std::cout << "Unknown operation" << std::endl;
+            }
+        }
+    }
+    return std::stoi(res.top().lex);
 }
