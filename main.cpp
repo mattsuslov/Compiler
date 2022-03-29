@@ -31,6 +31,7 @@ void test() {
     sum += tim.count();
 
     std::cout << Generation::inst().poliz.calc() << std::endl;
+    Generation::inst().print_got();
 }
 
 int main() {

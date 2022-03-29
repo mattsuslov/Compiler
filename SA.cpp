@@ -330,6 +330,7 @@ std::vector <Semantic::Type> SA::Params() {
     Name();
 
     sem.put_id(sem.id, sem.type);
+    std::string name = sem.id;
 
     res.push_back(sem.type);
     while (cur.data == ",") {
@@ -339,6 +340,9 @@ std::vector <Semantic::Type> SA::Params() {
             res.push_back(el);
         }
     }
+    gen.push_exp(name);
+    gen.push_exp("pop");
+    gen.push_exp(",");
     return res;
 }
 
@@ -349,9 +353,11 @@ void SA::Func() {
     std::string fname = sem.id;
     Semantic::Type ret_type = sem.type;
     sem.extend_tid();
+    gen.got[fname] = gen.poliz.get_current_address();
 
     if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
     GetToken();
+    gen.push_exp("(");
 
     Semantic::FSignature tmp;
     tmp.ret_type = ret_type;
@@ -362,8 +368,11 @@ void SA::Func() {
 
     if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
+    gen.push_exp(")");
+
 
     Block();
+    gen.push_op("ret");
 
     sem.del_tid();
 }
@@ -477,16 +486,18 @@ void SA::Prior1() {
             GetToken();
 
             Semantic::FSignature res;
+            gen.push_exp("(");
             if (cur.data != ")") {
                 res.params = Enumeration();
             }
 
             if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
             GetToken();
-
+            gen.push_exp(")");
             if (!sem.check_func(name, res)) throw Error(row, "Call to undefined function '" + name + "' ");
             sem.push_type(sem.getSignature(name, res).ret_type);
-
+            gen.push_exp(std::to_string(gen.got[name]));
+            gen.push_exp("call");
         } else if (cur.data == "[") {
             Semantic::Type type = sem.check_id(name);
             if (type.name == "") throw Error(row,"Undefined array '" + sem.id + "' ");
@@ -559,9 +570,10 @@ void SA::Prior3() {
     if (cur.data == "^") {
         std::string op = cur.data;
         GetToken();
+
+        gen.push_exp(op);
         Prior3();
         sem.check_op(op);
-        gen.push_exp(op);
     }
 }
 
@@ -570,10 +582,10 @@ void SA::Prior4() {
     if (cur.data == "*" || cur.data == "/" || cur.data == "%") {
         std::string op = cur.data;
         GetToken();
+        gen.push_exp(op);
         Prior4();
 
         sem.check_op(op);
-        gen.push_exp(op);
     }
 }
 
@@ -582,9 +594,9 @@ void SA::Prior5() {
     if (cur.data == "+" || cur.data == "-") {
         std::string op = cur.data;
         GetToken();
+        gen.push_exp(op);
         Prior5();
         sem.check_op(op);
-        gen.push_exp(op);
     }
 }
 
@@ -593,9 +605,9 @@ void SA::Prior6() {
     if (cur.data == ">" || cur.data == "<" || cur.data == ">=" || cur.data == "<=") {
         std::string op = cur.data;
         GetToken();
+        gen.push_exp(op);
         Prior6();
         sem.check_op(op);
-        gen.push_exp(op);
     }
 }
 
@@ -604,9 +616,9 @@ void SA::Prior7() {
     if (cur.data == "==" | cur.data == "!=") {
         std::string op = cur.data;
         GetToken();
+        gen.push_exp(op);
         Prior7();
         sem.check_op(op);
-        gen.push_exp(op);
     }
 }
 
@@ -632,9 +644,9 @@ void SA::Prior10() {
     Prior9();
     if (cur.data == "&&") {
         GetToken();
+        gen.push_exp("&&");
         Prior10();
         sem.check_op("&&");
-        gen.push_exp("&&");
     }
 }
 
@@ -642,9 +654,9 @@ void SA::Prior11() {
     Prior10();
     if (cur.data == "||") {
         GetToken();
+        gen.push_exp("||");
         Prior11();
         sem.check_op("||");
-        gen.push_exp("||");
     }
 }
 
@@ -709,6 +721,8 @@ void SA::Return() {
     if (cur.data != ";") Exp();
     if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
     GetToken();
+
+    gen.push_op("ret");
 }
 
 void SA::StructBody(Semantic::Type& t) {
@@ -1247,11 +1261,14 @@ Semantic::FSignature Semantic::Type::getSignature(const std::string &name, const
 }
 
 int Poliz::calc() {
+    if (!gen.got.count("main")) {
+        throw Error("I can't find start point. You need to create main function");
+    }
     std::stack<Token> res;
-    for (int i = 0; i < kim.size(); ++i) {
+    for (int i = gen.got["main"]; i < kim.size(); ++i) {
         Token x = kim[i];
         if (!x.is_operation) {
-            res.push(x);
+            res.push({x.lex});
         } else {
             std::vector<Token> operands;
             while (x.cnt--) {
@@ -1343,6 +1360,21 @@ int Poliz::calc() {
                 } else {
                     res.push({"false"});
                 }
+            } else if (x.lex == "ret") {
+                if (gen.ret_addr.empty()) return std::stoi(res.top().lex);
+                i = gen.ret_addr.top() - 1;
+                gen.ret_addr.pop();
+
+                std::string ret_val = (devalue(res.top().lex));
+                res.pop();
+                res.push({ret_val});
+            } else if (x.lex == "call") {
+                int addr = std::stoi(operands[0].lex);
+                gen.ret_addr.push(i + 1);
+                i = addr - 1;
+            } else if (x.lex == "pop") {
+                value[operands[0].lex] = {sem.check_id(operands[0].lex), res.top().lex};
+                res.pop();
             } else {
                 std::cout << "Unknown operation" << std::endl;
             }
@@ -1350,5 +1382,72 @@ int Poliz::calc() {
     }
 
     return std::stoi(res.top().lex);
+}
 
+void Generation::push_exp(const std::string &str) {
+    if (str == "+") {
+        poliz.push_operation("+", 5, 2, 0);
+    } else if (str == "-") {
+        poliz.push_operation("-", 5, 2, 0);
+    } else if (str == ";") {
+        poliz.finish_poliz();
+    } else if (str == "(") {
+        poliz.push_operation("(", 100, 0, 0);
+    } else if (str == ")") {
+        poliz.push_operation(")", 100, 0, 0);
+    } else if (str == ",") {
+        poliz.push_operation(",", 100, 0, 0);
+    } else if (str == "*") {
+        poliz.push_operation("*", 4, 2, 0);
+    } else if (str == "/") {
+        poliz.push_operation("/", 4, 2, 0);
+    } else if (str == "%") {
+        poliz.push_operation("%", 4, 2, 0);
+    } else if (str == "^") {
+        poliz.push_operation("^", 3, 2, 1);
+    } else if (str == "=") {
+        poliz.push_operation("=", 12, 2, 1);
+    } else if (str == "<") {
+        poliz.push_operation("<", 6, 2, 0);
+    } else if (str == "<=") {
+        poliz.push_operation("<=", 6, 2, 0);
+    } else if (str == ">") {
+        poliz.push_operation(">", 6, 2, 0);
+    } else if (str == ">=") {
+        poliz.push_operation(">=", 6, 2, 0);
+    }  else if (str == "==") {
+        poliz.push_operation("==", 7, 2, 0);
+    } else if (str == "!=") {
+        poliz.push_operation("!=", 7, 2, 0);
+    } else if (str == "&&") {
+        poliz.push_operation("&&", 10, 2, 0);
+    } else if (str == "||") {
+        poliz.push_operation("||", 11, 2, 0);
+    } else if (str == "call") {
+        poliz.push_operation("call", 1, 1, 0);
+    } else if (str == "pop") {
+        poliz.push_operation("pop", 1, 1, 0);
+    } else {
+        poliz.push_operand(str);
+    }
+    poliz.print_self();
+}
+
+void Generation::push_op(const std::string &str) {
+    if (str == "jmp") {
+        poliz.finish_poliz();
+        poliz.push_operation("jmp", 20, 1, 0);
+        poliz.finish_poliz();
+    } else if (str == "jf") {
+        poliz.finish_poliz();
+        poliz.push_operation("jf", 20, 2, 0);
+        poliz.finish_poliz();
+    } else if (str == "ret") {
+        poliz.finish_poliz();
+        poliz.push_operation("ret", 20, 0, 0);
+        poliz.finish_poliz();
+    } else {
+        poliz.push_operand(str);
+    }
+    poliz.print_self();
 }

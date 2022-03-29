@@ -147,6 +147,14 @@ public:
                 kim.push_back(x);
             }
             cock.pop();
+        } else if (str == ",") {
+            while (!cock.empty() && cock.top().lex != "(") {
+                Token x = cock.top();
+                cock.pop();
+                kim.push_back(x);
+            }
+        } else if (str == "(") {
+            cock.push({"(", true, is_right_ass, cnt, prior});
         } else if (is_right_ass) {
             while (!cock.empty() && prior > cock.top().prior) {
                 Token x = cock.top();
@@ -170,7 +178,6 @@ public:
             cock.pop();
         }
         print_self();
-//        std::cout << calc() << std::endl;
     }
 
     int calc();
@@ -210,70 +217,22 @@ private:
 class Generation {
 public:
     Poliz poliz;
+    std::map<std::string, int> got;
+    std::stack<int> ret_addr;
 
-    void push_exp(const std::string& str) {
-        if (str == "+") {
-            poliz.push_operation("+", 5, 2, 0);
-        } else if (str == "-") {
-            poliz.push_operation("-", 5, 2, 0);
-        } else if (str == ";") {
-            poliz.finish_poliz();
-        } else if (str == ",") {
-            poliz.finish_poliz();
-        } else if (str == "(") {
-            poliz.push_operation("(", 100, 0, 0);
-        } else if (str == ")") {
-            poliz.push_operation(")", 100, 0, 0);
-        } else if (str == "*") {
-            poliz.push_operation("*", 4, 2, 0);
-        } else if (str == "/") {
-            poliz.push_operation("/", 4, 2, 0);
-        } else if (str == "%") {
-            poliz.push_operation("%", 4, 2, 0);
-        } else if (str == "^") {
-            poliz.push_operation("^", 3, 2, 1);
-        } else if (str == "=") {
-            poliz.push_operation("=", 12, 2, 1);
-        } else if (str == "<") {
-            poliz.push_operation("<", 6, 2, 0);
-        } else if (str == "<=") {
-            poliz.push_operation("<=", 6, 2, 0);
-        } else if (str == ">") {
-            poliz.push_operation(">", 6, 2, 0);
-        } else if (str == ">=") {
-            poliz.push_operation(">=", 6, 2, 0);
-        }  else if (str == "==") {
-            poliz.push_operation("==", 7, 2, 0);
-        } else if (str == "!=") {
-            poliz.push_operation("!=", 7, 2, 0);
-        } else if (str == "&&") {
-            poliz.push_operation("&&", 10, 2, 0);
-        } else if (str == "||") {
-            poliz.push_operation("||", 11, 2, 0);
-        } else {
-            poliz.push_operand(str);
-        }
-        poliz.print_self();
-    }
+    void push_exp(const std::string& str);
 
-    void push_op(const std::string& str) {
-        if (str == "jmp") {
-            poliz.finish_poliz();
-            poliz.push_operation("jmp", 20, 1, 0);
-            poliz.finish_poliz();
-        } else if (str == "jf") {
-            poliz.finish_poliz();
-            poliz.push_operation("jf", 20, 2, 0);
-            poliz.finish_poliz();
-        } else {
-
-        }
-        poliz.print_self();
-    }
+    void push_op(const std::string& str);
 
     static Generation& inst() {
         static Generation res = Generation();
         return res;
+    }
+
+    void print_got() const {
+        for (const auto& it: got) {
+            std::cout << it.first << " " << it.second << std::endl;
+        }
     }
 
 private:
