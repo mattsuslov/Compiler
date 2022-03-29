@@ -218,6 +218,8 @@ public:
             poliz.push_operation("-", 5, 2, 0);
         } else if (str == ";") {
             poliz.finish_poliz();
+        } else if (str == ",") {
+            poliz.finish_poliz();
         } else if (str == "(") {
             poliz.push_operation("(", 100, 0, 0);
         } else if (str == ")") {
@@ -228,10 +230,26 @@ public:
             poliz.push_operation("/", 4, 2, 0);
         } else if (str == "%") {
             poliz.push_operation("%", 4, 2, 0);
+        } else if (str == "^") {
+            poliz.push_operation("^", 3, 2, 1);
         } else if (str == "=") {
             poliz.push_operation("=", 12, 2, 1);
         } else if (str == "<") {
             poliz.push_operation("<", 6, 2, 0);
+        } else if (str == "<=") {
+            poliz.push_operation("<=", 6, 2, 0);
+        } else if (str == ">") {
+            poliz.push_operation(">", 6, 2, 0);
+        } else if (str == ">=") {
+            poliz.push_operation(">=", 6, 2, 0);
+        }  else if (str == "==") {
+            poliz.push_operation("==", 7, 2, 0);
+        } else if (str == "!=") {
+            poliz.push_operation("!=", 7, 2, 0);
+        } else if (str == "&&") {
+            poliz.push_operation("&&", 10, 2, 0);
+        } else if (str == "||") {
+            poliz.push_operation("||", 11, 2, 0);
         } else {
             poliz.push_operand(str);
         }

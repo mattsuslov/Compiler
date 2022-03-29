@@ -1,8 +1,11 @@
 int main() {
-    int a;
-    a = 0;
-    while (a < 5) {
-        a = a + 1;
+    1*2 + 3*4;
+  int a = 8, b = 3;
+
+  int c = 1;
+
+  while (a < 7 || b < 4) {
+     c = c + 1;
+     b = 8;
     }
-    a + 0;
 }

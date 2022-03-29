@@ -1,10 +1,10 @@
 #include "SA.h"
 #include <regex>
+#include <cmath>
 #include <iostream>
 #include "Token.h"
 #include "Error.h"
 #include "Logger.h"
-
 
 
 SA::SA() {
@@ -21,29 +21,37 @@ void SA::Definition() {
     std::string id = sem.id;
     Semantic::Type t = sem.type;
 
+    gen.push_exp(id);
     if (cur.data == "=") {
         GetToken();
-
         Prior12();
-
         sem.check_op("=");
+
+        gen.push_exp("=");
+    } else {
+        gen.push_exp("0");
+        gen.push_exp("=");
     }
 
     sem.put_id(id, t);
 
     while (cur.data == ",") {
         GetToken();
+        gen.push_exp(",");
         Name();
 
         id = sem.id;
         t = sem.type;
-
+        gen.push_exp(id);
         if (cur.data == "=") {
             GetToken();
-
             Prior12();
-
             sem.check_op("=");
+
+            gen.push_exp("=");
+        } else {
+            gen.push_exp("0");
+            gen.push_exp("=");
         }
 
         sem.put_id(id, t);
@@ -86,6 +94,7 @@ std::vector<Semantic::Type> SA::Enumeration() {
 
     while (cur.data == ",") {
         GetToken();
+        gen.push_exp(",");
         Exp();
         res.push_back(sem.pop_type());
     }
@@ -194,15 +203,20 @@ void SA::If() {
     if (cur.data != "if") throw ExpectedSymbol(row, col, "if", cur.data.c_str());
     GetToken();
     if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
+    gen.push_exp("(");
     GetToken();
 
     Exp();
     sem.eq_type(Semantic::Type("bool"));
+
+    if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
+    gen.push_exp(")");
+
     int p1 = gen.poliz.get_current_address();
     gen.push_exp("nope");
     gen.push_op("jf");
 
-    if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
+
     GetToken();
 
     Operator();
@@ -547,6 +561,7 @@ void SA::Prior3() {
         GetToken();
         Prior3();
         sem.check_op(op);
+        gen.push_exp(op);
     }
 }
 
@@ -591,6 +606,7 @@ void SA::Prior7() {
         GetToken();
         Prior7();
         sem.check_op(op);
+        gen.push_exp(op);
     }
 }
 
@@ -618,6 +634,7 @@ void SA::Prior10() {
         GetToken();
         Prior10();
         sem.check_op("&&");
+        gen.push_exp("&&");
     }
 }
 
@@ -627,6 +644,7 @@ void SA::Prior11() {
         GetToken();
         Prior11();
         sem.check_op("||");
+        gen.push_exp("||");
     }
 }
 
@@ -1259,7 +1277,10 @@ int Poliz::calc() {
             } else if (x.lex == "%") {
                 int ans = std::stoi(devalue(operands[1].lex)) % std::stoi(devalue(operands[0].lex));
                 res.push({std::to_string(ans)});
-            } else if (x.lex == "jmp") {
+            } else if (x.lex == "^") {
+                int ans = pow(std::stoi(devalue(operands[1].lex)), std::stoi(devalue(operands[0].lex)));
+                res.push({std::to_string(ans)});
+            }  else if (x.lex == "jmp") {
                 int addr = std::stoi(devalue(operands[0].lex));
                 i = addr - 1;
             } else if (x.lex == "jf") {
@@ -1276,10 +1297,58 @@ int Poliz::calc() {
                 } else {
                     res.push({"false"});
                 }
+            } else if (x.lex == "<=") {
+                if (std::stoi(devalue(operands[1].lex)) <= std::stoi(devalue(operands[0].lex))) {
+                    res.push({"true"});
+                } else {
+                    res.push({"false"});
+                }
+            } else if (x.lex == ">") {
+                if (std::stoi(devalue(operands[1].lex)) > std::stoi(devalue(operands[0].lex))) {
+                    res.push({"true"});
+                } else {
+                    res.push({"false"});
+                }
+            } else if (x.lex == ">=") {
+                if (std::stoi(devalue(operands[1].lex)) >= std::stoi(devalue(operands[0].lex))) {
+                    res.push({"true"});
+                } else {
+                    res.push({"false"});
+                }
+            }  else if (x.lex == "==") {
+                if (std::stoi(devalue(operands[1].lex)) == std::stoi(devalue(operands[0].lex))) {
+                    res.push({"true"});
+                } else {
+                    res.push({"false"});
+                }
+            } else if (x.lex == "!=") {
+                if (std::stoi(devalue(operands[1].lex)) != std::stoi(devalue(operands[0].lex))) {
+                    res.push({"true"});
+                } else {
+                    res.push({"false"});
+                }
+            } else if (x.lex == "&&") {
+                bool lhs = (devalue(operands[1].lex) == "true");
+                bool rhs = (devalue(operands[0].lex) == "true");
+                if (lhs && rhs) {
+                    res.push({"true"});
+                } else {
+                    res.push({"false"});
+                }
+            } else if (x.lex == "||") {
+                bool lhs = (devalue(operands[1].lex) == "true");
+                bool rhs = (devalue(operands[0].lex) == "true");
+                if (lhs || rhs) {
+                    res.push({"true"});
+                } else {
+                    res.push({"false"});
+                }
             } else {
                 std::cout << "Unknown operation" << std::endl;
             }
         }
     }
+
     return std::stoi(res.top().lex);
+
 }
