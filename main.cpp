@@ -30,6 +30,7 @@ void test() {
     Logger::log("Total time: " + std::to_string(tim.count()));
     sum += tim.count();
 
+    Generation::inst().poliz.print_self();
     std::cout << Generation::inst().poliz.calc() << std::endl;
     Generation::inst().print_got();
 }

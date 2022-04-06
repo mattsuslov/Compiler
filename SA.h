@@ -20,17 +20,25 @@ public:
     struct FSignature;
     int row = 0;
 
+    struct TID {
+        std::map<std::string, Type> data;
+        TID* par = nullptr;
+    };
+    std::map <std::string, TID*> ma;
+
     struct Type {
         std::map<std::string, Type> fields;
         std::map<std::string, std::vector<FSignature>> ftid;
         std::string name;
         int ptr_num;
         bool is_ref;
+        int size = 1;
 
         Type (std::string name0, int ptr_num0=0, bool is_ref0=false) {
             name = name0;
             ptr_num = ptr_num0;
             is_ref = is_ref0;
+            size = get_size();
         }
 
         Type() = default;
@@ -47,6 +55,15 @@ public:
 
         friend bool operator==(const Type& lhs, const Type& rhs) {
             return lhs.name == rhs.name && lhs.ptr_num == rhs.ptr_num; // сравнение s_ref?
+        }
+
+        size_t get_size() {
+            if (ptr_num > 0 || is_ref) return 8;
+            if (name == "int") return 8;
+            if (name == "char") return 1;
+            if (name == "bool") return 1;
+            if (name == "float") return 8;
+            return 1;
         }
 
         bool check_method(const std::string& name) const;
@@ -73,10 +90,7 @@ public:
         }
     };
 
-    struct TID {
-        std::map<std::string, Type> data;
-        TID* par = nullptr;
-    };
+
 
     TID* getCurTid() const;
 
@@ -129,58 +143,26 @@ private:
 
 class Poliz {
 public:
-    void push_operand(const std::string& str) {
-        kim.push_back({str});
+    void push_operand(const std::string& str, Semantic::Type type, bool rvalue = 0) {
+        kim.push_back({str,0,0,0,0, rvalue, type});
         print_self();
     }
 
-    void put_operand(int i, const std::string& str) {
-        kim[i] = {str};
+    void put_operand(int i, const std::string& str, Semantic::Type type, bool rvalue = 0) {
+        kim[i] = {str, 0,0,0,0, rvalue, type};
         print_self();
     }
 
-    void push_operation(const std::string& str, int prior, int cnt, bool is_right_ass) {
-        if (str == ")") {
-            while (cock.top().lex != "(") {
-                Token x = cock.top();
-                cock.pop();
-                kim.push_back(x);
-            }
-            cock.pop();
-        } else if (str == ",") {
-            while (!cock.empty() && cock.top().lex != "(") {
-                Token x = cock.top();
-                cock.pop();
-                kim.push_back(x);
-            }
-        } else if (str == "(") {
-            cock.push({"(", true, is_right_ass, cnt, prior});
-        } else if (is_right_ass) {
-            while (!cock.empty() && prior > cock.top().prior) {
-                Token x = cock.top();
-                cock.pop();
-                kim.push_back(x);
-            }
-            cock.push({str, true, is_right_ass, cnt, prior});
-        } else {
-            while (!cock.empty() && prior >= cock.top().prior) {
-                Token x = cock.top();
-                cock.pop();
-                kim.push_back(x);
-            }
-            cock.push({str, true, is_right_ass, cnt, prior});
-        }
-    }
+    void push_operation(const std::string& str, int prior, int cnt, bool is_right_ass);
 
     void finish_poliz() {
         while (!cock.empty()) {
             kim.push_back(cock.top());
             cock.pop();
         }
-        print_self();
     }
 
-    int calc();
+    std::string calc();
 
     int get_current_address() {
         return kim.size();
@@ -191,14 +173,9 @@ public:
             std::cout << kim[i].lex << " ";
         }
         std::cout << std::endl;
+        std::cout << kim.size() << std::endl;
     }
 
-    std::string devalue(std::string str) {
-        if (value.count(str)) {
-            return value[str].second;
-        }
-        return str;
-    }
 
 private:
     struct Token {
@@ -207,22 +184,43 @@ private:
         bool is_right_ass = false;
         int cnt = 0;
         int prior = 0;
+        bool is_rvalue = false;
+        Semantic::Type type;
     };
 
+    struct TID {
+        std::map<std::string, std::pair<Semantic::Type, int>> data;
+        TID* par = nullptr;
+    };
+
+    std::pair<Semantic::Type, int> get_tid_value(std::string name) {
+        TID* ptr = cur_tid;
+        while (ptr) {
+            if (ptr->data.count(name)) {
+                return ptr->data[name];
+            }
+            ptr = ptr->par;
+        }
+        return {};
+    }
+
+    TID* cur_tid = new TID;
     std::stack<Token> cock;
     std::vector<Token> kim;
-    std::map<std::string, std::pair<Semantic::Type, std::string>> value;
+    std::vector<char> memory_stack;
+    std::stack<std::pair<int, TID*>> ret_addr;
+    int rbp = 0;
+
+
 };
 
 class Generation {
 public:
     Poliz poliz;
     std::map<std::string, int> got;
-    std::stack<int> ret_addr;
 
-    void push_exp(const std::string& str);
+    void push_exp(const std::string& str, Semantic::Type type = Semantic::Type(), bool rvalue = 0);
 
-    void push_op(const std::string& str);
 
     static Generation& inst() {
         static Generation res = Generation();

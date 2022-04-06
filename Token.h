@@ -4,6 +4,7 @@
 #include <string>
 #include <queue>
 #include <thread>
+#include <vector>
 
 enum {
 	Res,
@@ -18,6 +19,9 @@ enum {
 	Comment,
 	Other
 };
+//
+//std::vector <std::string> TYPENAME_TABLE{"", "", "char", "float", "int", "bool",
+//                                         "", "", "char*", "", ""};
 
 enum {
 	Nothing,

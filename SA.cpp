@@ -21,7 +21,8 @@ void SA::Definition() {
     std::string id = sem.id;
     Semantic::Type t = sem.type;
 
-    gen.push_exp(id);
+    gen.push_exp(id, t);
+    gen.push_exp("create");
     if (cur.data == "=") {
         GetToken();
         Prior12();
@@ -43,6 +44,7 @@ void SA::Definition() {
         id = sem.id;
         t = sem.type;
         gen.push_exp(id);
+        gen.push_exp("create");
         if (cur.data == "=") {
             GetToken();
             Prior12();
@@ -65,25 +67,25 @@ void SA::While() {
 
     if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
     GetToken();
-
     int p1 = gen.poliz.get_current_address();
     Exp();
     sem.eq_type(Semantic::Type("bool"));
     gen.poliz.finish_poliz();
     int p2 = gen.poliz.get_current_address();
     gen.push_exp("nope");
-    gen.push_op("jf");
+    gen.push_exp("jf");
 
     if (cur.data != ")") throw ExpectedSymbol(row, col, ")", cur.data.c_str());
     GetToken();
 
-
+    gen.push_exp("extend");
     NonExtendedOperator();
+    gen.push_exp("close");
     sem.del_tid();
 
-    gen.push_exp(std::to_string(p1));
-    gen.push_op("jmp");
-    gen.poliz.put_operand(p2, std::to_string(gen.poliz.get_current_address()));
+    gen.push_exp(std::to_string(p1), Semantic::Type("", 1), 1);
+    gen.push_exp("jmp");
+    gen.poliz.put_operand(p2, std::to_string(gen.poliz.get_current_address()), Semantic::Type("", 1), 1);
 }
 
 std::vector<Semantic::Type> SA::Enumeration() {
@@ -214,7 +216,7 @@ void SA::If() {
 
     int p1 = gen.poliz.get_current_address();
     gen.push_exp("nope");
-    gen.push_op("jf");
+    gen.push_exp("jf");
 
 
     GetToken();
@@ -222,20 +224,20 @@ void SA::If() {
     Operator();
     int p2 = gen.poliz.get_current_address();
     gen.push_exp("nope");
-    gen.push_op("jmp");
+    gen.push_exp("jmp");
 
     if (cur.data != "else") {
         sem.del_tid();
-        gen.poliz.put_operand(p1, std::to_string(gen.poliz.get_current_address()));
-        gen.poliz.put_operand(p2, std::to_string(gen.poliz.get_current_address()));
+        gen.poliz.put_operand(p1, std::to_string(gen.poliz.get_current_address()), Semantic::Type("", 1), 1);
+        gen.poliz.put_operand(p2, std::to_string(gen.poliz.get_current_address()), Semantic::Type("", 1), 1);
         return;
     }
     GetToken();
 
-    gen.poliz.put_operand(p1, std::to_string(gen.poliz.get_current_address()));
+    gen.poliz.put_operand(p1, std::to_string(gen.poliz.get_current_address()), Semantic::Type("", 1), 1);
     Operator();
     sem.del_tid();
-    gen.poliz.put_operand(p2, std::to_string(gen.poliz.get_current_address()));
+    gen.poliz.put_operand(p2, std::to_string(gen.poliz.get_current_address()), Semantic::Type("", 1), 1);
     gen.poliz.finish_poliz();
 }
 
@@ -279,16 +281,19 @@ void SA::Operator() {
         }
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
+        gen.push_exp(";");
         gen.poliz.finish_poliz();
     } else if (first_equals("exp", cur.data)) {
         Enumeration();
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
+        gen.push_exp(";");
         gen.poliz.finish_poliz();
     } else if (first_equals("definition", cur.data)) {
         Definition();
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
+        gen.push_exp(";");
         gen.poliz.finish_poliz();
     } else if (first_equals("block", cur.data)) {
         sem.extend_tid();
@@ -331,6 +336,7 @@ std::vector <Semantic::Type> SA::Params() {
 
     sem.put_id(sem.id, sem.type);
     std::string name = sem.id;
+    Semantic::Type t = sem.type;
 
     res.push_back(sem.type);
     while (cur.data == ",") {
@@ -340,7 +346,7 @@ std::vector <Semantic::Type> SA::Params() {
             res.push_back(el);
         }
     }
-    gen.push_exp(name);
+    gen.push_exp(name, t);
     gen.push_exp("pop");
     gen.push_exp(",");
     return res;
@@ -354,6 +360,7 @@ void SA::Func() {
     Semantic::Type ret_type = sem.type;
     sem.extend_tid();
     gen.got[fname] = gen.poliz.get_current_address();
+    gen.push_exp("extend");
 
     if (cur.data != "(") throw ExpectedSymbol(row, col, "(", cur.data.c_str());
     GetToken();
@@ -372,7 +379,7 @@ void SA::Func() {
 
 
     Block();
-    gen.push_op("ret");
+    gen.push_exp("ret");
 
     sem.del_tid();
 }
@@ -496,7 +503,7 @@ void SA::Prior1() {
             gen.push_exp(")");
             if (!sem.check_func(name, res)) throw Error(row, "Call to undefined function '" + name + "' ");
             sem.push_type(sem.getSignature(name, res).ret_type);
-            gen.push_exp(std::to_string(gen.got[name]));
+            gen.push_exp(std::to_string(gen.got[name]), Semantic::Type("", 1), true);
             gen.push_exp("call");
         } else if (cur.data == "[") {
             Semantic::Type type = sem.check_id(name);
@@ -521,7 +528,7 @@ void SA::Prior1() {
             if (type.name == "") throw Error(row,"Undefined var '" + sem.id + "' ");
 
             sem.push_type(type);
-            gen.push_exp(name);
+            gen.push_exp(name, type);
         }
     }
 }
@@ -542,19 +549,19 @@ void SA::Prior2() {
         } else {
             if (cur.type == Integer) {
                 sem.push_type(Semantic::Type("int"));
-                gen.push_exp(cur.data);
+                gen.push_exp(cur.data, Semantic::Type("int"), true);
             } else if (cur.type == Float) {
                 sem.push_type(Semantic::Type("float"));
-                gen.push_exp(cur.data);
+                gen.push_exp(cur.data, Semantic::Type("float"), true);
             } else if (cur.type == String) {
                 sem.push_type(Semantic::Type("char", 1));
-                gen.push_exp(cur.data);
+                gen.push_exp(cur.data, Semantic::Type("char", 1), true);
             } else if (cur.type == Char) {
                 sem.push_type(Semantic::Type("char", 0));
-                gen.push_exp(cur.data);
+                gen.push_exp(cur.data, Semantic::Type("char", 0), true);
             } else if (cur.type == Res && (cur.data == "true" || cur.data == "false") ) {
                 sem.push_type(Semantic::Type("bool"));
-                gen.push_exp(cur.data);
+                gen.push_exp(cur.data, Semantic::Type("bool"), true);
             } else {
                 throw ExpectedSymbol(row, col, "Constant", cur.data.c_str());
             }
@@ -722,7 +729,7 @@ void SA::Return() {
     if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
     GetToken();
 
-    gen.push_op("ret");
+    gen.push_exp("ret");
 }
 
 void SA::StructBody(Semantic::Type& t) {
@@ -863,14 +870,17 @@ void SA::NonExtendedOperator() {
         }
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
+        gen.push_exp(";");
     } else if (first_equals("exp", cur.data)) {
         Enumeration();
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
+        gen.push_exp(";");
     } else if (first_equals("definition", cur.data)) {
         Definition();
         if (cur.data != ";") throw ExpectedSymbol(row, col, ";", cur.data.c_str());
         GetToken();
+        gen.push_exp(";");
     } else if (first_equals("block", cur.data)) {
         Block();
     }  else if (first_equals("for", cur.data)) {
@@ -1044,6 +1054,8 @@ void Semantic::check_op(const std::string &op) {
         Type t2 = st.top(); st.pop();
         if (t1 == Semantic::Type("int") && t2 == Semantic::Type("int")) {
             st.push(t1);
+        } else if (t1 == Semantic::Type("float") && t2 == Semantic::Type("float")) {
+            st.push(t1);
         } else if (t1.ptr_num > 0 && t2 == Semantic::Type("int")) {
             st.push(t1);
         } else if (t1 == Semantic::Type("int") && t2.ptr_num > 0) {
@@ -1207,9 +1219,7 @@ Semantic::Type Semantic::check_id(const std::string &id) const {
 
 void Semantic::del_tid() {
     if (!cur_tid) return;
-    TID* tmp = cur_tid->par;
-    delete cur_tid;
-    cur_tid = tmp;
+    cur_tid = cur_tid->par;
 }
 
 Semantic &Semantic::inst() {
@@ -1260,7 +1270,7 @@ Semantic::FSignature Semantic::Type::getSignature(const std::string &name, const
     return seg;
 }
 
-int Poliz::calc() {
+std::string Poliz::calc() {
     if (!gen.got.count("main")) {
         throw Error("I can't find start point. You need to create main function");
     }
@@ -1268,129 +1278,256 @@ int Poliz::calc() {
     for (int i = gen.got["main"]; i < kim.size(); ++i) {
         Token x = kim[i];
         if (!x.is_operation) {
-            res.push({x.lex});
+            res.push(x);
         } else {
-            std::vector<Token> operands;
-            while (x.cnt--) {
-                operands.push_back(res.top());
-                res.pop();
-            }
+            if (x.lex == "create") {
+                Token op = res.top();
+                if (op.is_rvalue) throw Error(op.lex + " is not a variable");
+                cur_tid->data[op.lex] = {op.type, memory_stack.size() - rbp};
+                memory_stack.resize(memory_stack.size() + op.type.size);
+            } else if (x.lex == "+") {
+                Token op1 = res.top(); res.pop();
+                Token op2 = res.top(); res.pop();
 
-            if (x.lex == "+") {
-                int ans = 0;
-                for (Token el: operands) {
-                    ans += std::stoi(devalue(el.lex));
+                if (op1.type == Semantic::Type("int") && op2.type == Semantic::Type("int")) {
+                    long long a, b;
+                    if (op1.is_rvalue) {
+                        a = std::stoll(op1.lex);
+                    } else {
+                        size_t addr = cur_tid->data[op1.lex].second;
+                        a = *(int64_t*)&memory_stack[rbp + addr];
+                    }
+                    if (op2.is_rvalue) {
+                        b = std::stoll(op2.lex);
+                    } else {
+                        size_t addr = cur_tid->data[op2.lex].second;
+                        b = *(int64_t*)&memory_stack[rbp + addr];
+                    }
+                    res.push({std::to_string(a + b), 0,0,
+                              0,0,1,  Semantic::Type("int")});
+                } else if (op1.type == Semantic::Type("float") && op2.type == Semantic::Type("float")) {
+                    float a = std::stof(op1.lex);
+                    float b = std::stof(op2.lex);
+                    res.push({std::to_string(a + b), 0,0,
+                              0,0,1,  Semantic::Type("float")});
+                } else {
+                    throw Error("Can't add " + op1.type.name + " to " + op2.type.name);
                 }
-                res.push({std::to_string(ans)});
             } else if (x.lex == "-") {
-                int ans = std::stoi(devalue(operands[1].lex)) - std::stoi(devalue(operands[0].lex));
-                res.push({std::to_string(ans)});
-            } else if (x.lex == "*") {
-                int ans = std::stoi(devalue(operands[1].lex)) * std::stoi(devalue(operands[0].lex));
-                res.push({std::to_string(ans)});
-            } else if (x.lex == "/") {
-                int ans = std::stoi(devalue(operands[1].lex)) / std::stoi(devalue(operands[0].lex));
-                res.push({std::to_string(ans)});
-            } else if (x.lex == "%") {
-                int ans = std::stoi(devalue(operands[1].lex)) % std::stoi(devalue(operands[0].lex));
-                res.push({std::to_string(ans)});
-            } else if (x.lex == "^") {
-                int ans = pow(std::stoi(devalue(operands[1].lex)), std::stoi(devalue(operands[0].lex)));
-                res.push({std::to_string(ans)});
-            }  else if (x.lex == "jmp") {
-                int addr = std::stoi(devalue(operands[0].lex));
-                i = addr - 1;
-            } else if (x.lex == "jf") {
-                int addr = std::stoi(devalue(operands[0].lex));
-                if (operands[1].lex == "false") {
-                    i = addr - 1;
+                Token op1 = res.top(); res.pop();
+                Token op2 = res.top(); res.pop();
+
+                if (op1.type == Semantic::Type("int") && op2.type == Semantic::Type("int")) {
+                    long long a, b;
+                    if (op1.is_rvalue) {
+                        a = std::stoll(op1.lex);
+                    } else {
+                        size_t addr = cur_tid->data[op1.lex].second;
+                        a = *(int64_t*)&memory_stack[rbp + addr];
+                    }
+                    if (op2.is_rvalue) {
+                        b = std::stoll(op2.lex);
+                    } else {
+                        size_t addr = cur_tid->data[op2.lex].second;
+                        b = *(int64_t*)&memory_stack[rbp + addr];
+                    }
+                    res.push({std::to_string(b - a), 0,0,
+                              0,0,1,  Semantic::Type("int")});
+                } else if (op1.type == Semantic::Type("float") && op2.type == Semantic::Type("float")) {
+                    float a = std::stof(op1.lex);
+                    float b = std::stof(op2.lex);
+                    res.push({std::to_string(b - a), 0,0,
+                              0,0,1,  Semantic::Type("float")});
+                } else {
+                    throw Error("Can't add " + op1.type.name + " to " + op2.type.name);
                 }
             } else if (x.lex == "=") {
-                value[operands[1].lex] = {sem.check_id(devalue(operands[1].lex)), devalue(operands[0].lex)};
-                res.push({devalue(operands[1].lex)});
-            } else if (x.lex == "<") {
-                if (std::stoi(devalue(operands[1].lex)) < std::stoi(devalue(operands[0].lex))) {
-                    res.push({"true"});
+                Token op1 = res.top(); res.pop();
+                Token op2 = res.top(); res.pop();
+                if (op2.is_rvalue) throw Error("Left operand must be rvalue");
+                if (op1.type == Semantic::Type("int")) {
+                    long long a = std::stoll(op1.lex);
+                    size_t addr = cur_tid->data[op2.lex].second;
+                    long long* ptr = (long long*)&memory_stack[rbp + addr];
+                    *ptr = a;
                 } else {
-                    res.push({"false"});
+                    throw Error("= undefined type");
                 }
-            } else if (x.lex == "<=") {
-                if (std::stoi(devalue(operands[1].lex)) <= std::stoi(devalue(operands[0].lex))) {
-                    res.push({"true"});
+                res.push(op2);
+            } else if (x.lex == "call") {
+                Token op1 = res.top(); res.pop();
+                if (!op1.is_rvalue) throw Error("I need address to call");
+                if (op1.type == Semantic::Type("", 1)) {
+                    long long a = std::stoll(op1.lex);
+                    ret_addr.push({i + 1, cur_tid});
+                    i = a - 1;
+                    while (cur_tid->par != nullptr) {
+                        cur_tid = cur_tid->par;
+                    }
                 } else {
-                    res.push({"false"});
-                }
-            } else if (x.lex == ">") {
-                if (std::stoi(devalue(operands[1].lex)) > std::stoi(devalue(operands[0].lex))) {
-                    res.push({"true"});
-                } else {
-                    res.push({"false"});
-                }
-            } else if (x.lex == ">=") {
-                if (std::stoi(devalue(operands[1].lex)) >= std::stoi(devalue(operands[0].lex))) {
-                    res.push({"true"});
-                } else {
-                    res.push({"false"});
-                }
-            }  else if (x.lex == "==") {
-                if (std::stoi(devalue(operands[1].lex)) == std::stoi(devalue(operands[0].lex))) {
-                    res.push({"true"});
-                } else {
-                    res.push({"false"});
-                }
-            } else if (x.lex == "!=") {
-                if (std::stoi(devalue(operands[1].lex)) != std::stoi(devalue(operands[0].lex))) {
-                    res.push({"true"});
-                } else {
-                    res.push({"false"});
-                }
-            } else if (x.lex == "&&") {
-                bool lhs = (devalue(operands[1].lex) == "true");
-                bool rhs = (devalue(operands[0].lex) == "true");
-                if (lhs && rhs) {
-                    res.push({"true"});
-                } else {
-                    res.push({"false"});
-                }
-            } else if (x.lex == "||") {
-                bool lhs = (devalue(operands[1].lex) == "true");
-                bool rhs = (devalue(operands[0].lex) == "true");
-                if (lhs || rhs) {
-                    res.push({"true"});
-                } else {
-                    res.push({"false"});
+                    throw Error("call - undefined type");
                 }
             } else if (x.lex == "ret") {
-                if (gen.ret_addr.empty()) return std::stoi(res.top().lex);
-                i = gen.ret_addr.top() - 1;
-                gen.ret_addr.pop();
+                if (ret_addr.empty()) return res.top().lex;
+                i = ret_addr.top().first - 1;
+                while (cur_tid->par != nullptr) {
+                    TID* tmp = cur_tid->par;
+                    delete cur_tid;
+                    cur_tid = tmp;
+                }
+                cur_tid = ret_addr.top().second;
+                ret_addr.pop();
+            } else if (x.lex == "extend") {
+                TID* tmp = new TID;
+                tmp->par = cur_tid;
+                cur_tid = tmp;
+            } else if (x.lex == "<") {
+                Token op1 = res.top(); res.pop();
+                Token op2 = res.top(); res.pop();
 
-                std::string ret_val = (devalue(res.top().lex));
-                res.pop();
-                res.push({ret_val});
-            } else if (x.lex == "call") {
-                int addr = std::stoi(operands[0].lex);
-                gen.ret_addr.push(i + 1);
-                i = addr - 1;
+                if (op1.type == Semantic::Type("int") && op2.type == Semantic::Type("int")) {
+                    long long a, b;
+                    if (op1.is_rvalue) {
+                        a = std::stoll(op1.lex);
+                    } else {
+                        size_t addr = cur_tid->data[op1.lex].second;
+                        a = *(int64_t*)&memory_stack[rbp + addr];
+                    }
+                    if (op2.is_rvalue) {
+                        b = std::stoll(op2.lex);
+                    } else {
+                        size_t addr = cur_tid->data[op2.lex].second;
+                        b = *(int64_t*)&memory_stack[rbp + addr];
+                    }
+                    res.push({(b < a ? "true" : "false"), 0,0,
+                              0,0,1,  Semantic::Type("bool")});
+                } else if (op1.type == Semantic::Type("float") && op2.type == Semantic::Type("float")) {
+                    float a = std::stof(op1.lex);
+                    float b = std::stof(op2.lex);
+                    res.push({(b < a ? "true" : "false"), 0,0,
+                              0,0,1,  Semantic::Type("bool")});
+                } else {
+                    throw Error("Can't add " + op1.type.name + " to " + op2.type.name);
+                }
+            } else if (x.lex == "jmp") {
+                Token op1 = res.top(); res.pop();
+                if (!op1.is_rvalue) throw Error("I need address to call");
+                if (op1.type == Semantic::Type("", 1)) {
+                    long long a = std::stoll(op1.lex);
+                    i = a - 1;
+                } else {
+                    throw Error("jmp - undefined type");
+                }
+            } else if (x.lex == "jf") {
+                Token op1 = res.top(); res.pop();
+                Token op2 = res.top(); res.pop();
+                if (!op1.is_rvalue) throw Error("I need address to call");
+                bool expr;
+                if (op2.is_rvalue) {
+                    expr = op2.lex == "true";
+                } else {
+                    size_t addr = cur_tid->data[op2.lex].second;
+                    expr = *(bool*)&memory_stack[rbp + addr];
+                }
+                if (op1.type == Semantic::Type("", 1)) {
+                    if (!expr) {
+                        long long a = std::stoll(op1.lex);
+                        i = a - 1;
+                    }
+                } else {
+                    throw Error("jf - undefined type");
+                }
+            } else if (x.lex == "close") {
+                TID* tmp = cur_tid->par;
+                delete cur_tid;
+                cur_tid = tmp;
             } else if (x.lex == "pop") {
-                value[operands[0].lex] = {sem.check_id(operands[0].lex), res.top().lex};
+                Token op = res.top(); res.pop();
+                if (op.is_rvalue) throw Error(op.lex + " is not a variable");
+                int addr = memory_stack.size() - rbp;
+                cur_tid->data[op.lex] = {op.type, addr};
+                memory_stack.resize(memory_stack.size() + op.type.size);
+                Token op2 = res.top(); res.pop();
+                if (op.type == Semantic::Type("int") && op2.type == Semantic::Type("int")) {
+                    *(long long*)&memory_stack[rbp + addr] = std::stoll(op2.lex);
+                } else {
+                    throw Error("pop - undefined type");
+                }
+            } else if (x.lex == ">") {
+                Token op1 = res.top(); res.pop();
+                Token op2 = res.top(); res.pop();
+
+                if (op1.type == Semantic::Type("int") && op2.type == Semantic::Type("int")) {
+                    long long a, b;
+                    if (op1.is_rvalue) {
+                        a = std::stoll(op1.lex);
+                    } else {
+                        size_t addr = cur_tid->data[op1.lex].second;
+                        a = *(int64_t*)&memory_stack[rbp + addr];
+                    }
+                    if (op2.is_rvalue) {
+                        b = std::stoll(op2.lex);
+                    } else {
+                        size_t addr = cur_tid->data[op2.lex].second;
+                        b = *(int64_t*)&memory_stack[rbp + addr];
+                    }
+                    res.push({(b > a ? "true" : "false"), 0,0,
+                              0,0,1,  Semantic::Type("bool")});
+                } else if (op1.type == Semantic::Type("float") && op2.type == Semantic::Type("float")) {
+                    float a = std::stof(op1.lex);
+                    float b = std::stof(op2.lex);
+                    res.push({(b > a ? "true" : "false"), 0,0,
+                              0,0,1,  Semantic::Type("bool")});
+                } else {
+                    throw Error("Can't add " + op1.type.name + " to " + op2.type.name);
+                }
+            } else if (x.lex == ";") {
+                if (res.empty()) throw Error("; - where is operand????");
                 res.pop();
-            } else {
-                std::cout << "Unknown operation" << std::endl;
             }
         }
     }
-
-    return std::stoi(res.top().lex);
+    return res.top().lex;
 }
 
-void Generation::push_exp(const std::string &str) {
+void Poliz::push_operation(const std::string &str, int prior, int cnt, bool is_right_ass) {
+    if (str == ")") {
+        while (cock.top().lex != "(") {
+            Token x = cock.top();
+            cock.pop();
+            kim.push_back(x);
+        }
+        cock.pop();
+    } else if (str == ",") {
+        while (!cock.empty() && cock.top().lex != "(") {
+            Token x = cock.top();
+            cock.pop();
+            kim.push_back(x);
+        }
+    } else if (str == "(") {
+        cock.push({"(", true, is_right_ass, cnt, prior});
+    } else if (is_right_ass) {
+        while (!cock.empty() && prior > cock.top().prior) {
+            Token x = cock.top();
+            cock.pop();
+            kim.push_back(x);
+        }
+        cock.push({str, true, is_right_ass, cnt, prior});
+    } else {
+        while (!cock.empty() && prior >= cock.top().prior) {
+            Token x = cock.top();
+            cock.pop();
+            kim.push_back(x);
+        }
+        cock.push({str, true, is_right_ass, cnt, prior});
+    }
+}
+
+void Generation::push_exp(const std::string &str, Semantic::Type type, bool rvalue) {
     if (str == "+") {
         poliz.push_operation("+", 5, 2, 0);
     } else if (str == "-") {
         poliz.push_operation("-", 5, 2, 0);
-    } else if (str == ";") {
-        poliz.finish_poliz();
     } else if (str == "(") {
         poliz.push_operation("(", 100, 0, 0);
     } else if (str == ")") {
@@ -1427,14 +1564,10 @@ void Generation::push_exp(const std::string &str) {
         poliz.push_operation("call", 1, 1, 0);
     } else if (str == "pop") {
         poliz.push_operation("pop", 1, 1, 0);
-    } else {
-        poliz.push_operand(str);
-    }
-    poliz.print_self();
-}
-
-void Generation::push_op(const std::string &str) {
-    if (str == "jmp") {
+    } else if (str == "create") {
+        poliz.push_operation("create", 0, 1, 0);
+        poliz.finish_poliz();
+    } else if (str == "jmp") {
         poliz.finish_poliz();
         poliz.push_operation("jmp", 20, 1, 0);
         poliz.finish_poliz();
@@ -1446,8 +1579,20 @@ void Generation::push_op(const std::string &str) {
         poliz.finish_poliz();
         poliz.push_operation("ret", 20, 0, 0);
         poliz.finish_poliz();
+    } else if (str == "extend") {
+        poliz.finish_poliz();
+        poliz.push_operation("extend", 20, 0, 0);
+        poliz.finish_poliz();
+    } else if (str == "close") {
+        poliz.finish_poliz();
+        poliz.push_operation("close", 20, 0, 0);
+        poliz.finish_poliz();
+    } else if (str == ";") {
+        poliz.finish_poliz();
+        poliz.push_operation(";", 20, 0, 0);
+        poliz.finish_poliz();
     } else {
-        poliz.push_operand(str);
+        poliz.push_operand(str, type, rvalue);
     }
-    poliz.print_self();
 }
+

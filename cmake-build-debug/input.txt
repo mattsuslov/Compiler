@@ -1,4 +1,4 @@
-int gcd(int a, int b) {
+int g(int a, int b) {
     while (b > 0) {
         if (a < b) {
             int tmp = b;
@@ -7,9 +7,9 @@ int gcd(int a, int b) {
         }
         a = a - b;
     }
-    return a;
+    return a + 0;
 }
 
 int main() {
-    int c = gcd(1024 * 3, gcd(3 * 2, 10));
+    return g(6, g(3, 12));
 }
