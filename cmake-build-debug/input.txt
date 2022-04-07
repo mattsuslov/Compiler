@@ -10,6 +10,7 @@ int g(int a, int b) {
     return a + 0;
 }
 
+
 int main() {
     return g(6, g(4, 12));
 }

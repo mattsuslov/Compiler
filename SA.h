@@ -212,6 +212,15 @@ private:
     int rbp = 0;
 
 
+    void Create(std::stack<Token> &res);
+
+    void Addition(std::stack<Token> &res);
+
+    void Subtraction(std::stack<Token> &res);
+
+    void Equality(std::stack<Token> &res);
+
+    void Call(std::stack<Token> &res, int &i);
 };
 
 class Generation {

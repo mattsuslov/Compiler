@@ -1281,98 +1281,15 @@ std::string Poliz::calc() {
             res.push(x);
         } else {
             if (x.lex == "create") {
-                Token op = res.top();
-                if (op.is_rvalue) throw Error(op.lex + " is not a variable");
-                cur_tid->data[op.lex] = {op.type, memory_stack.size() - rbp};
-                memory_stack.resize(memory_stack.size() + op.type.size);
+                Create(res);
             } else if (x.lex == "+") {
-                Token op1 = res.top(); res.pop();
-                Token op2 = res.top(); res.pop();
-
-                if (op1.type == Semantic::Type("int") && op2.type == Semantic::Type("int")) {
-                    long long a, b;
-                    if (op1.is_rvalue) {
-                        a = std::stoll(op1.lex);
-                    } else {
-                        size_t addr = get_tid_value(op1.lex).second;
-                        a = *(int64_t*)&memory_stack[rbp + addr];
-                    }
-                    if (op2.is_rvalue) {
-                        b = std::stoll(op2.lex);
-                    } else {
-                        size_t addr = get_tid_value(op2.lex).second;
-                        b = *(int64_t*)&memory_stack[rbp + addr];
-                    }
-                    res.push({std::to_string(a + b), 0,0,
-                              0,0,1,  Semantic::Type("int")});
-                } else if (op1.type == Semantic::Type("float") && op2.type == Semantic::Type("float")) {
-                    float a = std::stof(op1.lex);
-                    float b = std::stof(op2.lex);
-                    res.push({std::to_string(a + b), 0,0,
-                              0,0,1,  Semantic::Type("float")});
-                } else {
-                    throw Error("Can't add " + op1.type.name + " to " + op2.type.name);
-                }
+                Addition(res);
             } else if (x.lex == "-") {
-                Token op1 = res.top(); res.pop();
-                Token op2 = res.top(); res.pop();
-
-                if (op1.type == Semantic::Type("int") && op2.type == Semantic::Type("int")) {
-                    long long a, b;
-                    if (op1.is_rvalue) {
-                        a = std::stoll(op1.lex);
-                    } else {
-                        size_t addr = get_tid_value(op1.lex).second;
-                        a = *(int64_t*)&memory_stack[rbp + addr];
-                    }
-                    if (op2.is_rvalue) {
-                        b = std::stoll(op2.lex);
-                    } else {
-                        size_t addr = get_tid_value(op2.lex).second;
-                        b = *(int64_t*)&memory_stack[rbp + addr];
-                    }
-                    res.push({std::to_string(b - a), 0,0,
-                              0,0,1,  Semantic::Type("int")});
-                } else if (op1.type == Semantic::Type("float") && op2.type == Semantic::Type("float")) {
-                    float a = std::stof(op1.lex);
-                    float b = std::stof(op2.lex);
-                    res.push({std::to_string(b - a), 0,0,
-                              0,0,1,  Semantic::Type("float")});
-                } else {
-                    throw Error("Can't add " + op1.type.name + " to " + op2.type.name);
-                }
+                Subtraction(res);
             } else if (x.lex == "=") {
-                Token op1 = res.top(); res.pop();
-                Token op2 = res.top(); res.pop();
-                if (op2.is_rvalue) throw Error("Left operand must be rvalue");
-                if (op1.type == Semantic::Type("int")) {
-                    long long a;
-                    if (op1.is_rvalue) {
-                        a = std::stoll(op1.lex);
-                    } else {
-                        size_t addr = get_tid_value(op1.lex).second;
-                        a = *(int64_t*)&memory_stack[rbp + addr];
-                    }
-                    size_t addr = get_tid_value(op2.lex).second;
-                    long long* ptr = (long long*)&memory_stack[rbp + addr];
-                    *ptr = a;
-                } else {
-                    throw Error("= undefined type");
-                }
-                res.push(op2);
+                Equality(res);
             } else if (x.lex == "call") {
-                Token op1 = res.top(); res.pop();
-                if (!op1.is_rvalue) throw Error("I need address to call");
-                if (op1.type == Semantic::Type("", 1)) {
-                    long long a = std::stoll(op1.lex);
-                    ret_addr.push({i + 1, cur_tid});
-                    i = a - 1;
-                    while (cur_tid->par != nullptr) {
-                        cur_tid = cur_tid->par;
-                    }
-                } else {
-                    throw Error("call - undefined type");
-                }
+                Call(res, i);
             } else if (x.lex == "ret") {
                 if (ret_addr.empty()) return res.top().lex;
                 i = ret_addr.top().first - 1;
@@ -1496,6 +1413,116 @@ std::string Poliz::calc() {
     return res.top().lex;
 }
 
+void Poliz::Call(std::stack<Token> &res, int &i) {
+    Token op1 = res.top();
+    res.pop();
+    if (!op1.is_rvalue) throw Error("I need address to call");
+    if (op1.type == Semantic::Type("", 1)) {
+        long long a = std::stoll(op1.lex);
+        this->ret_addr.push({i + 1, this->cur_tid});
+        i = a - 1;
+        while (this->cur_tid->par != nullptr) {
+            this->cur_tid = this->cur_tid->par;
+        }
+    } else {
+        throw Error("call - undefined type");
+    }
+}
+
+void Poliz::Equality(std::stack<Token> &res) {
+    Token op1 = res.top();
+    res.pop();
+    Token op2 = res.top();
+    res.pop();
+    if (op2.is_rvalue) throw Error("Left operand must be rvalue");
+    if (op1.type == Semantic::Type("int")) {
+        long long a;
+        if (op1.is_rvalue) {
+            a = std::stoll(op1.lex);
+        } else {
+            size_t addr = this->get_tid_value(op1.lex).second;
+            a = *(int64_t*)&this->memory_stack[this->rbp + addr];
+        }
+        size_t addr = this->get_tid_value(op2.lex).second;
+        long long* ptr = (long long*)&this->memory_stack[this->rbp + addr];
+        *ptr = a;
+    } else {
+        throw Error("= undefined type");
+    }
+    res.push(op2);
+}
+
+void Poliz::Subtraction(std::stack<Token> &res) {
+    Token op1 = res.top();
+    res.pop();
+    Token op2 = res.top();
+    res.pop();
+
+    if (op1.type == Semantic::Type("int") && op2.type == Semantic::Type("int")) {
+        long long a, b;
+        if (op1.is_rvalue) {
+            a = std::stoll(op1.lex);
+        } else {
+            size_t addr = this->get_tid_value(op1.lex).second;
+            a = *(int64_t*)&this->memory_stack[this->rbp + addr];
+        }
+        if (op2.is_rvalue) {
+            b = std::stoll(op2.lex);
+        } else {
+            size_t addr = this->get_tid_value(op2.lex).second;
+            b = *(int64_t*)&this->memory_stack[this->rbp + addr];
+        }
+        res.push({std::to_string(b - a), 0,0,
+                  0,0,1,  Semantic::Type("int")});
+    } else if (op1.type == Semantic::Type("float") && op2.type == Semantic::Type("float")) {
+        float a = std::stof(op1.lex);
+        float b = std::stof(op2.lex);
+        res.push({std::to_string(b - a), 0,0,
+                  0,0,1,  Semantic::Type("float")});
+    } else {
+        throw Error("Can't add " + op1.type.name + " to " + op2.type.name);
+    }
+}
+
+void Poliz::Addition(std::stack<Token> &res) {
+    Token op1 = res.top();
+    res.pop();
+    Token op2 = res.top();
+    res.pop();
+
+    if (op1.type == Semantic::Type("int") && op2.type == Semantic::Type("int")) {
+        long long a, b;
+        if (op1.is_rvalue) {
+            a = std::stoll(op1.lex);
+        } else {
+            size_t addr = this->get_tid_value(op1.lex).second;
+            a = *(int64_t*)&this->memory_stack[this->rbp + addr];
+        }
+        if (op2.is_rvalue) {
+            b = std::stoll(op2.lex);
+        } else {
+            size_t addr = this->get_tid_value(op2.lex).second;
+            b = *(int64_t*)&this->memory_stack[this->rbp + addr];
+        }
+        res.push({std::to_string(a + b), 0,0,
+                  0,0,1,  Semantic::Type("int")});
+    } else if (op1.type == Semantic::Type("float") && op2.type == Semantic::Type("float")) {
+        float a = std::stof(op1.lex);
+        float b = std::stof(op2.lex);
+        res.push({std::to_string(a + b), 0,0,
+                  0,0,1,  Semantic::Type("float")});
+    } else {
+        throw Error("Can't add " + op1.type.name + " to " + op2.type.name);
+    }
+}
+
+void Poliz::Create(std::stack<Token> &res) {
+    Token op = res.top();
+    if (op.is_rvalue) throw Error(op.lex + " is not a variable");
+    this->cur_tid->data[op.lex] = {op.type, this->memory_stack.size() - this->rbp};
+    this->memory_stack.resize(this->memory_stack.size() + op.type.size);
+}
+
 void Poliz::push_operation(const std::string &str, int prior, int cnt, bool is_right_ass) {
     if (str == ")") {
         while (cock.top().lex != "(") {
@@ -1528,6 +1555,7 @@ void Poliz::push_operation(const std::string &str, int prior, int cnt, bool is_r
         cock.push({str, true, is_right_ass, cnt, prior});
     }
 }
+
 
 void Generation::push_exp(const std::string &str, Semantic::Type type, bool rvalue) {
     if (str == "+") {
