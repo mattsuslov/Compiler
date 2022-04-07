@@ -1,15 +1,15 @@
 int g(int a, int b) {
-    while (b > 0) {
-        if (a < b) {
+    if (b > 0) {
+        if (b > a) {
             int tmp = b;
             b = a;
             a = tmp;
         }
-        a = a - b;
+        return g(b + 0, a - b + 0);
     }
     return a + 0;
 }
 
 int main() {
-    return g(6, g(3, 12));
+    return g(6, g(4, 12));
 }

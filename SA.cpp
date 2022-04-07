@@ -1294,13 +1294,13 @@ std::string Poliz::calc() {
                     if (op1.is_rvalue) {
                         a = std::stoll(op1.lex);
                     } else {
-                        size_t addr = cur_tid->data[op1.lex].second;
+                        size_t addr = get_tid_value(op1.lex).second;
                         a = *(int64_t*)&memory_stack[rbp + addr];
                     }
                     if (op2.is_rvalue) {
                         b = std::stoll(op2.lex);
                     } else {
-                        size_t addr = cur_tid->data[op2.lex].second;
+                        size_t addr = get_tid_value(op2.lex).second;
                         b = *(int64_t*)&memory_stack[rbp + addr];
                     }
                     res.push({std::to_string(a + b), 0,0,
@@ -1322,13 +1322,13 @@ std::string Poliz::calc() {
                     if (op1.is_rvalue) {
                         a = std::stoll(op1.lex);
                     } else {
-                        size_t addr = cur_tid->data[op1.lex].second;
+                        size_t addr = get_tid_value(op1.lex).second;
                         a = *(int64_t*)&memory_stack[rbp + addr];
                     }
                     if (op2.is_rvalue) {
                         b = std::stoll(op2.lex);
                     } else {
-                        size_t addr = cur_tid->data[op2.lex].second;
+                        size_t addr = get_tid_value(op2.lex).second;
                         b = *(int64_t*)&memory_stack[rbp + addr];
                     }
                     res.push({std::to_string(b - a), 0,0,
@@ -1346,8 +1346,14 @@ std::string Poliz::calc() {
                 Token op2 = res.top(); res.pop();
                 if (op2.is_rvalue) throw Error("Left operand must be rvalue");
                 if (op1.type == Semantic::Type("int")) {
-                    long long a = std::stoll(op1.lex);
-                    size_t addr = cur_tid->data[op2.lex].second;
+                    long long a;
+                    if (op1.is_rvalue) {
+                        a = std::stoll(op1.lex);
+                    } else {
+                        size_t addr = get_tid_value(op1.lex).second;
+                        a = *(int64_t*)&memory_stack[rbp + addr];
+                    }
+                    size_t addr = get_tid_value(op2.lex).second;
                     long long* ptr = (long long*)&memory_stack[rbp + addr];
                     *ptr = a;
                 } else {
@@ -1390,13 +1396,13 @@ std::string Poliz::calc() {
                     if (op1.is_rvalue) {
                         a = std::stoll(op1.lex);
                     } else {
-                        size_t addr = cur_tid->data[op1.lex].second;
+                        size_t addr = get_tid_value(op1.lex).second;
                         a = *(int64_t*)&memory_stack[rbp + addr];
                     }
                     if (op2.is_rvalue) {
                         b = std::stoll(op2.lex);
                     } else {
-                        size_t addr = cur_tid->data[op2.lex].second;
+                        size_t addr = get_tid_value(op2.lex).second;
                         b = *(int64_t*)&memory_stack[rbp + addr];
                     }
                     res.push({(b < a ? "true" : "false"), 0,0,
@@ -1426,7 +1432,7 @@ std::string Poliz::calc() {
                 if (op2.is_rvalue) {
                     expr = op2.lex == "true";
                 } else {
-                    size_t addr = cur_tid->data[op2.lex].second;
+                    size_t addr = get_tid_value(op2.lex).second;
                     expr = *(bool*)&memory_stack[rbp + addr];
                 }
                 if (op1.type == Semantic::Type("", 1)) {
@@ -1462,13 +1468,13 @@ std::string Poliz::calc() {
                     if (op1.is_rvalue) {
                         a = std::stoll(op1.lex);
                     } else {
-                        size_t addr = cur_tid->data[op1.lex].second;
+                        size_t addr = get_tid_value(op1.lex).second;
                         a = *(int64_t*)&memory_stack[rbp + addr];
                     }
                     if (op2.is_rvalue) {
                         b = std::stoll(op2.lex);
                     } else {
-                        size_t addr = cur_tid->data[op2.lex].second;
+                        size_t addr = get_tid_value(op2.lex).second;
                         b = *(int64_t*)&memory_stack[rbp + addr];
                     }
                     res.push({(b > a ? "true" : "false"), 0,0,
