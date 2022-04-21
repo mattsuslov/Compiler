@@ -21,14 +21,14 @@ public:
     int row = 0;
 
     struct TID {
-        std::map<std::string, Type> data;
+        std::map<std::string, std::pair<Type, int>> data;
         TID* par = nullptr;
     };
-    std::map <std::string, TID*> ma;
 
     struct Type {
-        std::map<std::string, Type> fields;
+        std::map<std::string, std::pair<Type, int>> fields;
         std::map<std::string, std::vector<FSignature>> ftid;
+        std::vector <int> shape;
         std::string name;
         int ptr_num;
         bool is_ref;
@@ -58,12 +58,32 @@ public:
         }
 
         size_t get_size() {
-            if (ptr_num > 0 || is_ref) return 8;
-            if (name == "int") return 8;
-            if (name == "char") return 1;
-            if (name == "bool") return 1;
-            if (name == "float") return 8;
-            return 1;
+            int size_ = 0;
+            if (ptr_num > 0 || is_ref) {
+                size_ = 8;
+            } else if (name == "int") {
+                size_ = 8;
+            } else if (name == "char") {
+                size_ = 1;
+            } else if (name == "bool") {
+                size_ = 1;
+            } else if (name == "float") {
+                size_ = 8;
+            }
+            for (auto& el: fields) {
+                size_ += el.second.first.get_size();
+            }
+            int pr = 1;
+            for (auto& el: shape) {
+                pr *= el;
+            }
+            size_ *= pr;
+            if (size_ == 0) return 1;
+            return size_;
+        }
+
+        void resize() {
+            size = get_size();
         }
 
         bool check_method(const std::string& name) const;
@@ -90,7 +110,7 @@ public:
         }
     };
 
-
+    void setAddr(const std::string& name, int addr);
 
     TID* getCurTid() const;
 
@@ -123,6 +143,7 @@ public:
     void eq_type(Type type);
 
     Type check_id(const std::string& id) const;
+    int check_addr(const std::string& id) const;
 
     void del_tid();
 
@@ -162,7 +183,7 @@ public:
         }
     }
 
-    std::string calc();
+    std::string calc(int start_point);
 
     int get_current_address() {
         return kim.size();
@@ -174,6 +195,14 @@ public:
         }
         std::cout << std::endl;
         std::cout << kim.size() << std::endl;
+    }
+
+    Poliz get_sub_poliz(int lhs, int rhs) {
+        Poliz poliz;
+        for (int i = lhs; i < rhs; ++i) {
+            poliz.kim.push_back(kim[i]);
+        }
+        return poliz;
     }
 
 
@@ -188,27 +217,11 @@ private:
         Semantic::Type type;
     };
 
-    struct TID {
-        std::map<std::string, std::pair<Semantic::Type, int>> data;
-        TID* par = nullptr;
-    };
 
-    std::pair<Semantic::Type, int> get_tid_value(std::string name) {
-        TID* ptr = cur_tid;
-        while (ptr) {
-            if (ptr->data.count(name)) {
-                return ptr->data[name];
-            }
-            ptr = ptr->par;
-        }
-        return {};
-    }
-
-    TID* cur_tid = new TID;
     std::stack<Token> cock;
     std::vector<Token> kim;
     std::vector<char> memory_stack;
-    std::stack<std::pair<int, TID*>> ret_addr;
+    std::stack<int> ret_addr;
     int rbp = 0;
 
 
@@ -218,15 +231,35 @@ private:
 
     void Subtraction(std::stack<Token> &res);
 
+    void Mult(std::stack<Token> &res);
+
     void Equality(std::stack<Token> &res);
 
     void Call(std::stack<Token> &res, int &i);
+
+    void Ret(int& i);
+
+    void Lower(std::stack<Token> &res, Token op1, Token op2);
+
+    void Jmp(std::stack<Token> &res, int &i);
+
+    void Jf(std::stack<Token> &res, int &i);
+
+    void Pop(std::stack<Token> &res);
+
+    void Sub(std::stack<Token> &res);
+
+    void Dot(std::stack<Token> &res) const;
+
+    void cast_lvalue(Token &op1);
+
 };
 
 class Generation {
 public:
     Poliz poliz;
     std::map<std::string, int> got;
+    int f_size = 0;
 
     void push_exp(const std::string& str, Semantic::Type type = Semantic::Type(), bool rvalue = 0);
 
@@ -241,9 +274,6 @@ public:
             std::cout << it.first << " " << it.second << std::endl;
         }
     }
-
-private:
-    Generation() = default;
 
 };
 
